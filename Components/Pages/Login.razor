@@ -1,0 +1,41 @@
+@page "/login"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject UserService UserService
+
+<PageTitle>Log In</PageTitle>
+
+<div class="home-taskbar">Paperless QC</div>
+
+<div class="home-container">
+    <div class="sheet-container">
+        <div class="sheet-title">Who's logging in?</div>
+        @if (!users.Any())
+        {
+            <p class="history-empty">No users found. Contact a master user to get set up.</p>
+        }
+        else
+        {
+            <div class="home-cards">
+                @foreach (var user in users)
+                {
+                    <a class="home-card" href="/login-as/@user.Id" data-enhance-nav="false">
+                        <div class="home-card-title">@user.Name</div>
+                        @if (user.IsMaster)
+                        {
+                            <div class="home-card-desc">Master</div>
+                        }
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<UserService.UserRecord> users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await UserService.GetAllUsersAsync();
+    }
+}

@@ -1,0 +1,714 @@
+@page "/film-type-formula-settings"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject SpecOptionsService SpecOptionsService
+@inject SpecRuleService SpecRuleService
+
+<PageTitle>Film Type & Formula Settings</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Film Type &amp; Formula Settings</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+
+    <div class="settings-columns">
+        <div class="settings-panel">
+            <div class="settings-panel-header">
+                <h3>Film Types</h3>
+                <button type="button" class="btn-select-toggle" @onclick="() => showFilmTypesList = !showFilmTypesList">
+                    @(showFilmTypesList ? "▲ Minimize" : "▼ Expand")
+                </button>
+            </div>
+            <div class="settings-add-row">
+                <input type="text" class="search-box" placeholder="New film type..."
+                       value="@newFilmType" @oninput="OnFilmTypeInput" @onkeydown="OnFilmTypeKeyDown" />
+                <button class="btn-add" @onclick="AddFilmType" disabled="@string.IsNullOrWhiteSpace(newFilmType)">+ Add</button>
+            </div>
+            @if (!string.IsNullOrEmpty(filmTypeError))
+            {
+                <p class="settings-error">@filmTypeError</p>
+            }
+            @if (showFilmTypesList)
+            {
+                @if (!filmTypes.Any())
+                {
+                    <p class="history-empty">No film types yet.</p>
+                }
+                else
+                {
+                    <ul class="settings-list">
+                        @foreach (var ft in filmTypes)
+                        {
+                            <li>
+                                <span>@ft.Name</span>
+                                <button class="btn-danger btn-history-delete" @onclick="() => DeleteFilmType(ft.Id)">Delete</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="settings-panel rules-panel">
+        <h3>Specification Rules (Sets)</h3>
+        <p class="rules-hint">
+            A rule ties one Film Type to a named Set — sheets auto-apply a Set whenever their selected Film Type
+            matches. Each metric (Roll Weight, Stretch Force, etc.) has its own grid of gauge x roll-width ranges
+            within that Set, each with its own LSL / Target / USL — so a metric's spec can switch based on both
+            thickness and width.
+        </p>
+
+        @if (!string.IsNullOrEmpty(ruleError))
+        {
+            <p class="settings-error">@ruleError</p>
+        }
+
+        <div class="rule-form">
+            @if (editingRuleId.HasValue)
+            {
+                <div class="rule-edit-banner">
+                    <span>Editing rule <strong>@newRule.SetName</strong> (@string.Join(", ", selectedFilmTypes.OrderBy(f => f)))</span>
+                    <button type="button" class="btn-secondary" @onclick="CancelEdit">Cancel</button>
+                </div>
+            }
+            <div class="rule-form-row">
+                <label>
+                    Set Name
+                    <input type="text" class="cell-input wide-input" placeholder="Set A" @bind="newRule.SetName" />
+                </label>
+            </div>
+
+            <div class="rule-grid-label">Film Types</div>
+            <div class="rule-formula-summary">
+                <span class="rule-formula-summary-text">
+                    @(selectedFilmTypes.Any() ? string.Join(", ", selectedFilmTypes.OrderBy(f => f)) : "No film types selected")
+                </span>
+                <button type="button" class="btn-select-toggle" @onclick="() => showFilmTypePicker = !showFilmTypePicker">
+                    @(showFilmTypePicker ? "Done" : "Select Film Types")
+                </button>
+            </div>
+            @if (showFilmTypePicker)
+            {
+                @if (!filmTypes.Any())
+                {
+                    <p class="history-empty">No film types yet — add one above first.</p>
+                }
+                else
+                {
+                    <div class="copy-options rule-formula-checks">
+                        @foreach (var ft in filmTypes)
+                        {
+                            <label>
+                                <input type="checkbox" checked="@selectedFilmTypes.Contains(ft.Name)"
+                                       @onchange="e => ToggleFilmType(ft.Name, (bool)e.Value)" />
+                                @ft.Name
+                            </label>
+                        }
+                    </div>
+                }
+            }
+
+            <div class="rule-grid-label">Metrics — gauge x width grid (LSL / Target / USL per cell)</div>
+            <p class="rules-hint">
+                Leave Min blank on a row/column to make it the low, open-ended bucket (shown as just the value).
+                Leave Max blank to make it the high, open-ended bucket (shown as "value or above").
+            </p>
+            @for (int m = 1; m <= SpecRule.MetricLabels.Length; m++)
+            {
+                var metricIndex = m;
+                var idx = metricIndex - 1;
+                var rows = gaugeRowsByMetric[idx];
+                var cols = widthColsByMetric[idx];
+                var fieldConfig = pendingFieldConfig[metricIndex];
+                var gaugeOnly = SpecRule.GaugeOnlyMetricIndexes.Contains(metricIndex);
+                <div class="metric-bracket-block">
+                    <div class="metric-bracket-header-row">
+                        <div class="metric-bracket-header">@SpecRule.MetricLabels[idx]</div>
+                        <div class="metric-field-toggles">
+                            <label><input type="checkbox" @bind="fieldConfig.HasLSL" /> LSL</label>
+                            <label><input type="checkbox" @bind="fieldConfig.HasTarget" /> Target</label>
+                            <label><input type="checkbox" @bind="fieldConfig.HasUSL" /> USL</label>
+                        </div>
+                    </div>
+
+                    @if (gaugeOnly)
+                    {
+                        @if (rows.Any())
+                        {
+                            <div class="metric-excel-grid-wrapper">
+                                <table class="metric-excel-grid">
+                                    <tr>
+                                        <th class="corner-cell">Gauge</th>
+                                        @if (fieldConfig.HasLSL) { <th>LSL</th> }
+                                        @if (fieldConfig.HasTarget) { <th>Target</th> }
+                                        @if (fieldConfig.HasUSL) { <th>USL</th> }
+                                    </tr>
+                                    @foreach (var row in rows)
+                                    {
+                                        var cell = EnsureCell(metricIndex, row, cols[0]);
+                                        <tr>
+                                            <th>
+                                                <div class="grid-header-label">@SpecRuleService.FormatRange(row.Min, row.Max, " ga")</div>
+                                                <button type="button" class="grid-remove-btn" title="Remove row" @onclick="() => RemoveGaugeRow(metricIndex, row)">✕</button>
+                                            </th>
+                                            @if (fieldConfig.HasLSL) { <td class="metric-grid-cell"><input type="text" placeholder="LSL" class="cell-input" @bind="cell.LSL" /></td> }
+                                            @if (fieldConfig.HasTarget) { <td class="metric-grid-cell"><input type="text" placeholder="Target" class="cell-input" @bind="cell.Target" /></td> }
+                                            @if (fieldConfig.HasUSL) { <td class="metric-grid-cell"><input type="text" placeholder="USL" class="cell-input" @bind="cell.USL" /></td> }
+                                        </tr>
+                                    }
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="history-empty">Add at least one gauge row to build this metric's spec.</p>
+                        }
+                    }
+                    else if (rows.Any() && cols.Any())
+                    {
+                        <div class="metric-excel-grid-wrapper">
+                            <table class="metric-excel-grid">
+                                <tr>
+                                    <th class="corner-cell"></th>
+                                    @foreach (var col in cols)
+                                    {
+                                        <th>
+                                            <div class="grid-header-label">@SpecRuleService.FormatRange(col.Min, col.Max, " in")</div>
+                                            <button type="button" class="grid-remove-btn" title="Remove column" @onclick="() => RemoveWidthCol(metricIndex, col)">✕</button>
+                                        </th>
+                                    }
+                                </tr>
+                                @foreach (var row in rows)
+                                {
+                                    <tr>
+                                        <th>
+                                            <div class="grid-header-label">@SpecRuleService.FormatRange(row.Min, row.Max, " ga")</div>
+                                            <button type="button" class="grid-remove-btn" title="Remove row" @onclick="() => RemoveGaugeRow(metricIndex, row)">✕</button>
+                                        </th>
+                                        @foreach (var col in cols)
+                                        {
+                                            var cell = EnsureCell(metricIndex, row, col);
+                                            <td class="metric-grid-cell">
+                                                @if (fieldConfig.HasLSL)
+                                                {
+                                                    <input type="text" placeholder="LSL" class="cell-input" @bind="cell.LSL" />
+                                                }
+                                                @if (fieldConfig.HasTarget)
+                                                {
+                                                    <input type="text" placeholder="Target" class="cell-input" @bind="cell.Target" />
+                                                }
+                                                @if (fieldConfig.HasUSL)
+                                                {
+                                                    <input type="text" placeholder="USL" class="cell-input" @bind="cell.USL" />
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="history-empty">Add at least one gauge row and one width column to build this metric's grid.</p>
+                    }
+
+                    <div class="metric-grid-add-controls">
+                        <div class="metric-grid-add-row">
+                            <select class="cell-input" @bind="draftGaugeMode[idx]">
+                                <option value="Range">Range (min–max)</option>
+                                <option value="UpTo">Up to (open-ended low)</option>
+                                <option value="AndAbove">And above (open-ended high)</option>
+                            </select>
+                            @if (draftGaugeMode[idx] == "Range")
+                            {
+                                <input type="number" step="0.001" placeholder="Gauge Min" class="cell-input" @bind="draftGaugeRow[idx].Min" />
+                                <input type="number" step="0.001" placeholder="Gauge Max" class="cell-input" @bind="draftGaugeRow[idx].Max" />
+                            }
+                            else
+                            {
+                                <input type="number" step="0.001" placeholder="Value" class="cell-input" @bind="draftGaugeRow[idx].Value" />
+                            }
+                            <button type="button" class="btn-select-toggle" @onclick="() => AddGaugeRow(metricIndex)">+ Add Gauge Row</button>
+                        </div>
+                        @if (!gaugeOnly)
+                        {
+                            <div class="metric-grid-add-row">
+                                <select class="cell-input" @bind="draftWidthMode[idx]">
+                                    <option value="Range">Range (min–max)</option>
+                                    <option value="UpTo">Up to (open-ended low)</option>
+                                    <option value="AndAbove">And above (open-ended high)</option>
+                                </select>
+                                @if (draftWidthMode[idx] == "Range")
+                                {
+                                    <input type="number" step="0.001" placeholder="Width Min" class="cell-input" @bind="draftWidthCol[idx].Min" />
+                                    <input type="number" step="0.001" placeholder="Width Max" class="cell-input" @bind="draftWidthCol[idx].Max" />
+                                }
+                                else
+                                {
+                                    <input type="number" step="0.001" placeholder="Value" class="cell-input" @bind="draftWidthCol[idx].Value" />
+                                }
+                                <button type="button" class="btn-select-toggle" @onclick="() => AddWidthCol(metricIndex)">+ Add Width Column</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="rule-grid-label">Spec Notes</div>
+            <div class="rule-specs-grid">
+                <div class="rule-spec-col">
+                    <div class="rule-metric-name">@SpecRule.SpecLabels[0]</div>
+                    <textarea class="cell-input" @bind="newRule.Spec1"></textarea>
+                </div>
+                <div class="rule-spec-col">
+                    <div class="rule-metric-name">@SpecRule.SpecLabels[1]</div>
+                    <textarea class="cell-input" @bind="newRule.Spec2"></textarea>
+                </div>
+                <div class="rule-spec-col">
+                    <div class="rule-metric-name">@SpecRule.SpecLabels[2]</div>
+                    <textarea class="cell-input" @bind="newRule.Spec3"></textarea>
+                </div>
+                <div class="rule-spec-col">
+                    <div class="rule-metric-name">@SpecRule.SpecLabels[3]</div>
+                    <textarea class="cell-input" @bind="newRule.Spec4"></textarea>
+                </div>
+                <div class="rule-spec-col">
+                    <div class="rule-metric-name">@SpecRule.SpecLabels[4]</div>
+                    <textarea class="cell-input" @bind="newRule.Spec5"></textarea>
+                </div>
+                <div class="rule-spec-col">
+                    <div class="rule-metric-name">@SpecRule.SpecLabels[5]</div>
+                    <textarea class="cell-input" @bind="newRule.Spec6"></textarea>
+                </div>
+            </div>
+
+            <div class="rule-form-actions">
+                <button class="btn-add" @onclick="SaveRule">@(editingRuleId.HasValue ? "Save Changes" : "+ Add Rule")</button>
+                @if (editingRuleId.HasValue)
+                {
+                    <button type="button" class="btn-secondary" @onclick="CancelEdit">Cancel</button>
+                }
+            </div>
+        </div>
+
+        @if (!rules.Any())
+        {
+            <p class="history-empty">No rules yet.</p>
+        }
+        else
+        {
+            <div class="history-list">
+                @foreach (var r in rules)
+                {
+                    var isExpanded = r == expandedRule;
+                    <div class="history-card">
+                        <div class="history-card-header" @onclick="() => ToggleExpand(r)">
+                            <div class="history-card-main">
+                                <span class="history-date">@string.Join(", ", r.FilmTypes)</span>
+                                <span class="history-field"><strong>Set:</strong> @r.SetName</span>
+                            </div>
+                            <div class="history-card-actions">
+                                <button class="btn-select-toggle" @onclick="() => StartEdit(r)" @onclick:stopPropagation="true">Edit</button>
+                                <button class="btn-danger btn-history-delete" @onclick="() => DeleteRule(r.Id)" @onclick:stopPropagation="true">Delete</button>
+                                <span class="history-toggle">@(isExpanded ? "▲" : "▼")</span>
+                            </div>
+                        </div>
+                        @if (isExpanded)
+                        {
+                            <div class="rule-view">
+                                @for (int m = 1; m <= SpecRule.MetricLabels.Length; m++)
+                                {
+                                    var brackets = r.BracketsFor(m).ToList();
+                                    if (brackets.Any())
+                                    {
+                                        var fc = r.FieldConfigFor(m);
+                                        var gaugeOnly = SpecRule.GaugeOnlyMetricIndexes.Contains(m);
+                                        <div class="rule-view-metric">
+                                            <div class="rule-metric-name">@SpecRule.MetricLabels[m - 1]</div>
+                                            <table>
+                                                <tr>
+                                                    <th>Gauge Range</th>
+                                                    @if (!gaugeOnly) { <th>Width Range</th> }
+                                                    @if (fc.HasLSL) { <th>LSL</th> }
+                                                    @if (fc.HasTarget) { <th>Target</th> }
+                                                    @if (fc.HasUSL) { <th>USL</th> }
+                                                </tr>
+                                                @foreach (var b in brackets)
+                                                {
+                                                    <tr>
+                                                        <td>@SpecRuleService.FormatRange(b.GaugeMin, b.GaugeMax)</td>
+                                                        @if (!gaugeOnly) { <td>@SpecRuleService.FormatRange(b.WidthMin, b.WidthMax, " in")</td> }
+                                                        @if (fc.HasLSL) { <td>@b.LSL</td> }
+                                                        @if (fc.HasTarget) { <td>@b.Target</td> }
+                                                        @if (fc.HasUSL) { <td>@b.USL</td> }
+                                                    </tr>
+                                                }
+                                            </table>
+                                        </div>
+                                    }
+                                }
+                                @{ var notes = GetRuleNotes(r); }
+                                @if (notes.Any())
+                                {
+                                    <div class="set-notes">
+                                        @foreach (var note in notes)
+                                        {
+                                            <div class="set-note"><strong>@note.Label:</strong> @note.Note</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<(int Id, string Name)> filmTypes = new();
+    private string newFilmType = "";
+    private string filmTypeError = "";
+    private bool showFilmTypesList = false;
+    private string ruleError = "";
+    private List<SpecRule> rules = new();
+    private SpecRule newRule = new();
+    private HashSet<string> selectedFilmTypes = new();
+    private bool showFilmTypePicker = false;
+    private List<MetricBracket> pendingBrackets = new();
+    private Dictionary<int, MetricFieldConfig> pendingFieldConfig = Enumerable.Range(1, SpecRule.MetricLabels.Length).ToDictionary(m => m, SpecRule.DefaultFieldConfig);
+    private SpecRule? expandedRule;
+    private int? editingRuleId;
+
+    private class RangeBand
+    {
+        public decimal? Min { get; set; }
+        public decimal? Max { get; set; }
+        public decimal? Value { get; set; }
+    }
+
+    private static List<RangeBand>[] BuildInitialWidthColsByMetric()
+    {
+        var cols = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new List<RangeBand>()).ToArray();
+        EnsureGaugeOnlyWidthCols(cols);
+        return cols;
+    }
+
+    // Gauge-only metrics (e.g. Gel Count) always resolve against a single implicit "any width" column.
+    private static void EnsureGaugeOnlyWidthCols(List<RangeBand>[] widthCols)
+    {
+        foreach (var metricIndex in SpecRule.GaugeOnlyMetricIndexes)
+        {
+            var idx = metricIndex - 1;
+            if (idx >= 0 && idx < widthCols.Length && !widthCols[idx].Any())
+                widthCols[idx].Add(new RangeBand { Min = null, Max = null });
+        }
+    }
+
+    private List<RangeBand>[] gaugeRowsByMetric = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new List<RangeBand>()).ToArray();
+    private List<RangeBand>[] widthColsByMetric = BuildInitialWidthColsByMetric();
+    private RangeBand[] draftGaugeRow = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new RangeBand()).ToArray();
+    private RangeBand[] draftWidthCol = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new RangeBand()).ToArray();
+    private string[] draftGaugeMode = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => "Range").ToArray();
+    private string[] draftWidthMode = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => "Range").ToArray();
+
+    protected override async Task OnInitializedAsync()
+    {
+        filmTypes = await SpecOptionsService.GetFilmTypesAsync();
+        rules = await SpecRuleService.GetAllRulesAsync();
+    }
+
+    private void OnFilmTypeInput(ChangeEventArgs e) => newFilmType = e.Value?.ToString() ?? "";
+
+    private async Task OnFilmTypeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddFilmType();
+    }
+
+    private async Task AddFilmType()
+    {
+        var name = newFilmType.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        try
+        {
+            await SpecOptionsService.AddFilmTypeAsync(name);
+            newFilmType = "";
+            filmTypeError = "";
+            filmTypes = await SpecOptionsService.GetFilmTypesAsync();
+        }
+        catch (Microsoft.Data.SqlClient.SqlException)
+        {
+            filmTypeError = $"\"{name}\" already exists.";
+        }
+    }
+
+    private async Task DeleteFilmType(int id)
+    {
+        await SpecOptionsService.DeleteFilmTypeAsync(id);
+        filmTypes = await SpecOptionsService.GetFilmTypesAsync();
+    }
+
+    private void ToggleFilmType(string name, bool include)
+    {
+        if (include) selectedFilmTypes.Add(name);
+        else selectedFilmTypes.Remove(name);
+    }
+
+    private static int CompareRangeBands(RangeBand a, RangeBand b)
+    {
+        var cmp = (a.Min ?? decimal.MinValue).CompareTo(b.Min ?? decimal.MinValue);
+        return cmp != 0 ? cmp : (a.Max ?? decimal.MaxValue).CompareTo(b.Max ?? decimal.MaxValue);
+    }
+
+    private MetricBracket EnsureCell(int metricIndex, RangeBand row, RangeBand col)
+    {
+        var existing = pendingBrackets.FirstOrDefault(b =>
+            b.MetricIndex == metricIndex &&
+            b.GaugeMin == row.Min && b.GaugeMax == row.Max &&
+            b.WidthMin == col.Min && b.WidthMax == col.Max);
+        if (existing != null) return existing;
+
+        var cell = new MetricBracket
+        {
+            MetricIndex = metricIndex,
+            GaugeMin = row.Min,
+            GaugeMax = row.Max,
+            WidthMin = col.Min,
+            WidthMax = col.Max,
+        };
+        pendingBrackets.Add(cell);
+        return cell;
+    }
+
+    private static (decimal? Min, decimal? Max)? ResolveBand(string mode, RangeBand draft, out string? error)
+    {
+        error = null;
+        switch (mode)
+        {
+            case "UpTo":
+                if (draft.Value == null) { error = "Enter a value."; return null; }
+                return (null, draft.Value);
+            case "AndAbove":
+                if (draft.Value == null) { error = "Enter a value."; return null; }
+                return (draft.Value, null);
+            default: // "Range"
+                if (draft.Min == null || draft.Max == null) { error = "Enter both Min and Max for a bounded range."; return null; }
+                if (draft.Max < draft.Min) { error = "Max must be greater than or equal to Min."; return null; }
+                return (draft.Min, draft.Max);
+        }
+    }
+
+    private void AddGaugeRow(int metricIndex)
+    {
+        ruleError = "";
+        var idx = metricIndex - 1;
+
+        var band = ResolveBand(draftGaugeMode[idx], draftGaugeRow[idx], out var error);
+        if (band == null)
+        {
+            ruleError = $"{error} ({SpecRule.MetricLabels[idx]} gauge row)";
+            return;
+        }
+
+        var rows = gaugeRowsByMetric[idx];
+        if (rows.Any(r => r.Min == band.Value.Min && r.Max == band.Value.Max))
+        {
+            ruleError = $"That gauge row already exists for {SpecRule.MetricLabels[idx]}.";
+            return;
+        }
+
+        var newRow = new RangeBand { Min = band.Value.Min, Max = band.Value.Max };
+        rows.Add(newRow);
+        rows.Sort(CompareRangeBands);
+        foreach (var col in widthColsByMetric[idx])
+            EnsureCell(metricIndex, newRow, col);
+
+        draftGaugeRow[idx] = new RangeBand();
+        draftGaugeMode[idx] = "Range";
+    }
+
+    private void AddWidthCol(int metricIndex)
+    {
+        ruleError = "";
+        var idx = metricIndex - 1;
+
+        var band = ResolveBand(draftWidthMode[idx], draftWidthCol[idx], out var error);
+        if (band == null)
+        {
+            ruleError = $"{error} ({SpecRule.MetricLabels[idx]} width column)";
+            return;
+        }
+
+        var cols = widthColsByMetric[idx];
+        if (cols.Any(c => c.Min == band.Value.Min && c.Max == band.Value.Max))
+        {
+            ruleError = $"That width column already exists for {SpecRule.MetricLabels[idx]}.";
+            return;
+        }
+
+        var newCol = new RangeBand { Min = band.Value.Min, Max = band.Value.Max };
+        cols.Add(newCol);
+        cols.Sort(CompareRangeBands);
+        foreach (var row in gaugeRowsByMetric[idx])
+            EnsureCell(metricIndex, row, newCol);
+
+        draftWidthCol[idx] = new RangeBand();
+        draftWidthMode[idx] = "Range";
+    }
+
+    private void RemoveGaugeRow(int metricIndex, RangeBand row)
+    {
+        var idx = metricIndex - 1;
+        gaugeRowsByMetric[idx].Remove(row);
+        pendingBrackets.RemoveAll(b => b.MetricIndex == metricIndex && b.GaugeMin == row.Min && b.GaugeMax == row.Max);
+    }
+
+    private void RemoveWidthCol(int metricIndex, RangeBand col)
+    {
+        var idx = metricIndex - 1;
+        widthColsByMetric[idx].Remove(col);
+        pendingBrackets.RemoveAll(b => b.MetricIndex == metricIndex && b.WidthMin == col.Min && b.WidthMax == col.Max);
+    }
+
+    private void ToggleExpand(SpecRule rule) => expandedRule = expandedRule == rule ? null : rule;
+
+    private List<(string Label, string Note)> GetRuleNotes(SpecRule r)
+    {
+        var candidates = new List<(string Label, string Note)>
+        {
+            (SpecRule.SpecLabels[0], r.Spec1),
+            (SpecRule.SpecLabels[1], r.Spec2),
+            (SpecRule.SpecLabels[2], r.Spec3),
+            (SpecRule.SpecLabels[3], r.Spec4),
+            (SpecRule.SpecLabels[4], r.Spec5),
+            (SpecRule.SpecLabels[5], r.Spec6),
+        };
+        return candidates.Where(c => !string.IsNullOrWhiteSpace(c.Note)).ToList();
+    }
+
+    private async Task SaveRule()
+    {
+        ruleError = "";
+
+        if (!selectedFilmTypes.Any() || string.IsNullOrWhiteSpace(newRule.SetName))
+        {
+            ruleError = "At least one Film Type and a Set Name are required.";
+            return;
+        }
+
+        newRule.FilmTypes = selectedFilmTypes.ToList();
+        newRule.MetricBrackets = pendingBrackets.ToList();
+        newRule.MetricFields = pendingFieldConfig.ToDictionary(kv => kv.Key, kv => new MetricFieldConfig
+        {
+            HasLSL = kv.Value.HasLSL,
+            HasTarget = kv.Value.HasTarget,
+            HasUSL = kv.Value.HasUSL,
+        });
+
+        if (editingRuleId.HasValue)
+            await SpecRuleService.UpdateRuleAsync(editingRuleId.Value, newRule);
+        else
+            await SpecRuleService.AddRuleAsync(newRule);
+
+        ResetForm();
+        rules = await SpecRuleService.GetAllRulesAsync();
+    }
+
+    private void StartEdit(SpecRule rule)
+    {
+        ruleError = "";
+        editingRuleId = rule.Id;
+        newRule = new SpecRule
+        {
+            Id = rule.Id,
+            SetName = rule.SetName,
+            Spec1 = rule.Spec1, Spec2 = rule.Spec2, Spec3 = rule.Spec3,
+            Spec4 = rule.Spec4, Spec5 = rule.Spec5, Spec6 = rule.Spec6,
+        };
+        selectedFilmTypes = new HashSet<string>(rule.FilmTypes);
+        showFilmTypePicker = false;
+
+        pendingFieldConfig = Enumerable.Range(1, SpecRule.MetricLabels.Length).ToDictionary(m => m, m =>
+        {
+            var fc = rule.FieldConfigFor(m);
+            return new MetricFieldConfig { HasLSL = fc.HasLSL, HasTarget = fc.HasTarget, HasUSL = fc.HasUSL };
+        });
+
+        pendingBrackets = rule.MetricBrackets.Select(b => new MetricBracket
+        {
+            MetricIndex = b.MetricIndex,
+            GaugeMin = b.GaugeMin,
+            GaugeMax = b.GaugeMax,
+            WidthMin = b.WidthMin,
+            WidthMax = b.WidthMax,
+            Target = b.Target,
+            USL = b.USL,
+            LSL = b.LSL,
+        }).ToList();
+
+        gaugeRowsByMetric = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(i =>
+        {
+            var list = pendingBrackets.Where(b => b.MetricIndex == i + 1)
+                .Select(b => (b.GaugeMin, b.GaugeMax))
+                .Distinct()
+                .Select(g => new RangeBand { Min = g.GaugeMin, Max = g.GaugeMax })
+                .ToList();
+            list.Sort(CompareRangeBands);
+            return list;
+        }).ToArray();
+
+        widthColsByMetric = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(i =>
+        {
+            var list = pendingBrackets.Where(b => b.MetricIndex == i + 1)
+                .Select(b => (b.WidthMin, b.WidthMax))
+                .Distinct()
+                .Select(w => new RangeBand { Min = w.WidthMin, Max = w.WidthMax })
+                .ToList();
+            list.Sort(CompareRangeBands);
+            return list;
+        }).ToArray();
+        EnsureGaugeOnlyWidthCols(widthColsByMetric);
+
+        draftGaugeRow = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new RangeBand()).ToArray();
+        draftWidthCol = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new RangeBand()).ToArray();
+        draftGaugeMode = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => "Range").ToArray();
+        draftWidthMode = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => "Range").ToArray();
+        expandedRule = null;
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        editingRuleId = null;
+        ruleError = "";
+        newRule = new();
+        selectedFilmTypes.Clear();
+        showFilmTypePicker = false;
+        pendingBrackets.Clear();
+        pendingFieldConfig = Enumerable.Range(1, SpecRule.MetricLabels.Length).ToDictionary(m => m, SpecRule.DefaultFieldConfig);
+        gaugeRowsByMetric = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new List<RangeBand>()).ToArray();
+        widthColsByMetric = BuildInitialWidthColsByMetric();
+        draftGaugeRow = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new RangeBand()).ToArray();
+        draftWidthCol = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => new RangeBand()).ToArray();
+        draftGaugeMode = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => "Range").ToArray();
+        draftWidthMode = Enumerable.Range(0, SpecRule.MetricLabels.Length).Select(_ => "Range").ToArray();
+    }
+
+    private async Task DeleteRule(int id)
+    {
+        await SpecRuleService.DeleteRuleAsync(id);
+        if (editingRuleId == id)
+            ResetForm();
+        rules = await SpecRuleService.GetAllRulesAsync();
+    }
+
+    private void GoHome() => Nav.NavigateTo("/");
+}

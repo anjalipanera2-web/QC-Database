@@ -1,0 +1,1018 @@
+@page "/stretch-film-reel-audit-log"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Web
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject IJSRuntime JS
+@inject QCAuditService QCAuditService
+@inject EditRequestService EditRequestService
+@inject AutosaveSettingsService AutosaveSettingsService
+@inject CurrentUserService CurrentUserService
+
+<PageTitle>Stretch Film Reel Audit Log</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Stretch Film Reel Audit Log</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+    <button class="btn-flag @(!string.IsNullOrWhiteSpace(Sheet.FlagComment) ? "flagged" : "")" @onclick="() => showFlagDialog = true">
+        🚩 @(!string.IsNullOrWhiteSpace(Sheet.FlagComment) ? "Flagged" : "Flag")
+    </button>
+    <!--Header field tiles-->
+    <div class="screen-only" style="padding: 10px 10px 2px;">
+        <div class="field-group">
+            <div class="field-group-label">Sheet Info</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Date</div><input type="date" @bind="Sheet.Date" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Time</div><TimeSelector @bind-Value="Sheet.Time"/></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Line</div><input type="text" @bind="Sheet.LineNumber" placeholder="Line Number" class="f-input" /></div></td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Shift</div>
+                            <select @bind="Sheet.Shift" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="Day">Day</option>
+                                <option value="Night">Night</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Crew</div>
+                            <select @bind="Sheet.Crew" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Logged By</div><input type="text" @bind="Sheet.LoggedBy" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Product</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Formula Code</div><input type="text" @bind="Sheet.FormulaCode" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Product Type</div><input type="text" @bind="Sheet.ProductType" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Width</div><input type="text" @bind="Sheet.Width" placeholder="Width" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Footage (Charting)</div><input type="text" @bind="Sheet.Charting" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Footage (Counter)</div><input type="text" @bind="Sheet.Counter" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Weight Spec 1</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">LSL</div><input type="text" @bind="Sheet.LSL1" class="f-input" /></div></td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Target</div><input type="text" @bind="Sheet.Target1" class="f-input" /></div></td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">USL</div><input type="text" @bind="Sheet.USL1" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Weight Spec 2</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">LSL</div><input type="text" @bind="Sheet.LSL2" class="f-input" /></div></td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Target</div><input type="text" @bind="Sheet.Target2" class="f-input" /></div></td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">USL</div><input type="text" @bind="Sheet.USL2" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Order</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Order Number</div><input type="text" @bind="Sheet.OrderNumber" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label"># of Pallets</div><input type="text" @bind="Sheet.NumPallets" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!--Print-only: original dense form header-->
+    <div class="print-header" style="padding: 10px 10px 2px;">
+        <table class="sheet-table">
+            <tr>
+                <th>Date</th>
+                <td><input type="date" @bind="Sheet.Date" class="cell-input wide-input" /></td>
+                <th>Time</th>
+                <td><TimeSelector @bind-Value="Sheet.Time"/></td>
+                <th>Line</th>
+                <td><input type="text" @bind="Sheet.LineNumber" placeholder="Line Number" class="cell-input wide-input" /></td>
+                <th>Shift</th>
+                <td>
+                    <select @bind="Sheet.Shift" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Day">Day</option>
+                        <option value="Night">Night</option>
+                    </select>
+                </td>
+                <th>Crew</th>
+                <td>
+                    <select @bind="Sheet.Crew" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                    </select>
+                </td>
+                <th>Logged By</th>
+                <td><input type="text" @bind="Sheet.LoggedBy" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>Formula Code</th>
+                <td><input type="text" @bind="Sheet.FormulaCode" class="cell-input wide-input" /></td>
+                <th>Product Type</th>
+                <td><input type="text" @bind="Sheet.ProductType" class="cell-input wide-input" /></td>
+                <th>Width</th>
+                <td><input type="text" @bind="Sheet.Width" placeholder="Width" class="cell-input wide-input" /></td>
+                <th>Footage (Charting)</th>
+                <td><input type="text" @bind="Sheet.Charting" class="cell-input wide-input" /></td>
+                <th>Footage (Counter)</th>
+                <td><input type="text" @bind="Sheet.Counter" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th colspan="2">Weight Spec 1</th>
+                <th>LSL</th>
+                <td><input type="text" @bind="Sheet.LSL1" class="cell-input wide-input" /></td>
+                <th>Target</th>
+                <td><input type="text" @bind="Sheet.Target1" class="cell-input wide-input" /></td>
+                <th>USL</th>
+                <td><input type="text" @bind="Sheet.USL1" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th colspan="2">Weight Spec 2</th>
+                <th>LSL</th>
+                <td><input type="text" @bind="Sheet.LSL2" class="cell-input wide-input" /></td>
+                <th>Target</th>
+                <td><input type="text" @bind="Sheet.Target2" class="cell-input wide-input" /></td>
+                <th>USL</th>
+                <td><input type="text" @bind="Sheet.USL2" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>Order Number</th>
+                <td><input type="text" @bind="Sheet.OrderNumber" class="cell-input wide-input" /></td>
+                <th># of Pallets</th>
+                <td><input type="text" @bind="Sheet.NumPallets" class="cell-input wide-input" /></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="table-scroll-wrapper">
+        <table class="sheet-table">
+            <thead>
+                <!-- Pallet data column group headers -->
+                <tr class="header-row-8">
+                    <th colspan="6"></th>
+                    <th colspan="2">Comments</th>
+                    <th colspan="2">Grading</th>
+                </tr>
+                <!-- Pallet data column headers -->
+                <tr class="header-row-9">
+                    <th>Barcode</th>
+                    <th>Pallet #</th>
+                    <th>Pos.</th>
+                    <th>Width</th>
+                    <th>Core Prot.</th>
+                    <th>Gross Weight</th>
+                    <th>W#</th>
+                    <th>W#</th>
+                    <th>W#</th>
+                    <th>W#</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!--Row 10: Barcode-->
+                <!-- ROWS 10-20: Data Inputs-->
+                <tr class="header-row-10">
+                    <td rowspan="5"><input type="text" @bind="Sheet.Barcode" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.PalletNum1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight1_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight1_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight1_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight1_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 11 -->
+                <tr class="header-row-11">
+                    <td><input type="text" @bind="Sheet.PalletNum2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight2_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight2_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight2_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight2_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 12 -->
+                <tr class="header-row-12">
+                    <td><input type="text" @bind="Sheet.PalletNum3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight3_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight3_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight3_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight3_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 13 -->
+                <tr class="header-row-13">
+                    <td><input type="text" @bind="Sheet.PalletNum4" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position4" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width4" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection4" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight4" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight4_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight4_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight4_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight4_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 14 -->
+                <tr class="header-row-14">
+                    <td><input type="text" @bind="Sheet.PalletNum5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight5_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight5_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight5_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight5_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 15 -->
+                <tr class="header-row-15">
+                    <th>Notify Production</th>
+                    <td><input type="text" @bind="Sheet.PalletNum6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight6_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight6_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight6_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight6_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 16: Notify Production -->
+                <tr class="header-row-16">
+                    <td rowspan="5"><input type="text" @bind="Sheet.Notify" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.PalletNum7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight7_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight7_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight7_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight7_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 17 -->
+                <tr class="header-row-17">
+                    <td><input type="text" @bind="Sheet.PalletNum8" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position8" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width8" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection8" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight8" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight8_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight8_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight8_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight8_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 18 -->
+                <tr class="header-row-18">
+                    <td><input type="text" @bind="Sheet.PalletNum9" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position9" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width9" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection9" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight9" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight9_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight9_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight9_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight9_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 19 -->
+                <tr class="header-row-19">
+                    <td><input type="text" @bind="Sheet.PalletNum10" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position10" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width10" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection10" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight10" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight10_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight10_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight10_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight10_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+                <!-- ROW 20 -->
+                <tr class="header-row-20">
+                    <td><input type="text" @bind="Sheet.PalletNum11" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Position11" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Width11" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.CoreProtection11" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.GrossWeight11" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight11_1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Weight11_2" class="cell-input wide-input" /></td>
+                    <td><select @bind="Sheet.Weight11_3" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                    <td><select @bind="Sheet.Weight11_4" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Good">Good</option>
+                        <option value="Reject">Reject</option>
+                    </select></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!--Charting Instructions field tiles-->
+    <div class="screen-only" style="padding: 4px 10px 2px;">
+        <div class="field-group">
+            <div class="field-group-label">Charting Instructions</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Web</div><input type="text" @bind="Sheet.Web" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Packing Code</div><input type="text" @bind="Sheet.PackingCode" class="f-input" /></div></td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Unit</div>
+                            <select @bind="Sheet.Unit" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="Metric">Metric</option>
+                                <option value="Standard">Standard</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Box #</div><input type="text" @bind="Sheet.BoxNum" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Die</div><input type="text" @bind="Sheet.Die" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Roll Details</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Layers/Pallet</div><input type="text" @bind="Sheet.LayersPallet" class="f-input" /></div></td>
+                    <td class="band-2">
+                        <div class="f-tile">
+                            <div class="f-label">Product</div>
+                            <select @bind="Sheet.Product" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="AmTopp">AmTopp</option>
+                                <option value="Generic">Generic</option>
+                                <option value="Barcode">Barcode</option>
+                                <option value="SPEC">SPEC</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Box Label</div><input type="text" @bind="Sheet.BoxLabel" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">QC Test Roll Pos</div><input type="text" @bind="Sheet.QCTestRollPos" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Order Info</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">RLS or CS/PLT</div><input type="text" @bind="Sheet.RLS" class="f-input" /></div></td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Ex. Pallet Ticket</div><input type="text" @bind="Sheet.ExPalletTicket" class="f-input" /></div></td>
+                    <td class="band-3">
+                        <div class="f-tile">
+                            <div class="f-label">Pallets</div>
+                            <select @bind="Sheet.PalletType" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="HTT">HTT</option>
+                                <option value="Regular Pallet">Regular Pallet</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">PW</div><input type="text" @bind="Sheet.PW" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Roll Condition</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Size</div><input type="text" @bind="Sheet.Size" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Condition</div><input type="text" @bind="Sheet.Condition" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Tail #</div><input type="text" @bind="Sheet.Tail" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!--Print-only: original dense form layout-->
+    <div class="print-header" style="padding: 4px 10px 2px;">
+        <table class="sheet-table">
+            <tr>
+                <th>Web</th>
+                <td><input type="text" @bind="Sheet.Web" class="cell-input wide-input" /></td>
+                <th>Packing Code</th>
+                <td><input type="text" @bind="Sheet.PackingCode" class="cell-input wide-input" /></td>
+                <th>Unit</th>
+                <td>
+                    <select @bind="Sheet.Unit" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Metric">Metric</option>
+                        <option value="Standard">Standard</option>
+                    </select>
+                </td>
+                <th>Box #</th>
+                <td><input type="text" @bind="Sheet.BoxNum" class="cell-input wide-input" /></td>
+                <th>Die</th>
+                <td><input type="text" @bind="Sheet.Die" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>Layers/Pallet</th>
+                <td><input type="text" @bind="Sheet.LayersPallet" class="cell-input wide-input" /></td>
+                <th>Product</th>
+                <td>
+                    <select @bind="Sheet.Product" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="AmTopp">AmTopp</option>
+                        <option value="Generic">Generic</option>
+                        <option value="Barcode">Barcode</option>
+                        <option value="SPEC">SPEC</option>
+                    </select>
+                </td>
+                <th>Box Label</th>
+                <td><input type="text" @bind="Sheet.BoxLabel" class="cell-input wide-input" /></td>
+                <th>QC Test Roll Pos</th>
+                <td><input type="text" @bind="Sheet.QCTestRollPos" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>RLS or CS/PLT</th>
+                <td><input type="text" @bind="Sheet.RLS" class="cell-input wide-input" /></td>
+                <th>Ex. Pallet Ticket</th>
+                <td><input type="text" @bind="Sheet.ExPalletTicket" class="cell-input wide-input" /></td>
+                <th>Pallets</th>
+                <td>
+                    <select @bind="Sheet.PalletType" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="HTT">HTT</option>
+                        <option value="Regular Pallet">Regular Pallet</option>
+                    </select>
+                </td>
+                <th>PW</th>
+                <td><input type="text" @bind="Sheet.PW" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>Size</th>
+                <td><input type="text" @bind="Sheet.Size" class="cell-input wide-input" /></td>
+                <th>Condition</th>
+                <td><input type="text" @bind="Sheet.Condition" class="cell-input wide-input" /></td>
+                <th>Tail #</th>
+                <td><input type="text" @bind="Sheet.Tail" class="cell-input wide-input" /></td>
+            </tr>
+        </table>
+    </div>
+
+        <div class="row-controls">
+            <button class="btn-add" @onclick="SaveToDatabase">Save</button>
+            <span>@saveMessage</span>
+            <span class="autosave-status">@autoSaveStatus</span>
+            <!--Save Log Dialog-->
+            @if (showSaveConfirmation)
+            {
+                <div class="copy-overlay">
+                    <div class="delete-dialog">
+                        <div class="delete-dialog-header">
+                            <h4>Confirm Save</h4>
+                        </div>
+                        <div class="delete-dialog-body">
+                            <p>Are you sure you want to save this log to the database?</p>
+                        </div>
+                        <div class="delete-dialog-footer">
+                            <button class="btn-secondary" @onclick="() => showSaveConfirmation = false">Cancel</button>
+                            <button class="btn-add" @onclick="ConfirmSave">Yes, Save</button>
+                        </div>
+                    </div>
+                </div>
+            }
+            <!--Export Buttons-->
+            <div class="export-controls">
+                <button class="btn-export-excel" @onclick="ExportToExcel">↓ Export Excel</button>
+                <button class="btn-export-pdf" @onclick="ExportToPdf">↓ Export PDF</button>
+            </div>
+        </div>
+    </div>
+    <!--Flag Comment Dialog-->
+    @if (showFlagDialog)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Flag This Sheet</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <textarea class="cell-input wide-input" rows="4" style="border: 1px solid #c5d8ee; border-radius: 3px;"
+                              placeholder="Describe the issue..." @bind="Sheet.FlagComment"></textarea>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showFlagDialog = false">Cancel</button>
+                    <button class="btn-danger" @onclick="ClearFlag">Clear Flag</button>
+                    <button class="btn-add" @onclick="() => showFlagDialog = false">Done</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Unsaved Changes Confirmation (Back button)-->
+    @if (showLeaveConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Unsaved Changes</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>You have unsaved changes on this sheet. Save before leaving?</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showLeaveConfirmation = false">Cancel</button>
+                    <button class="btn-danger" @onclick="LeaveWithoutSaving">Discard &amp; Leave</button>
+                    <button class="btn-add" @onclick="LeaveWithSaving">Save &amp; Leave</button>
+                </div>
+            </div>
+        </div>
+    }
+
+@code {
+    <!--Save to Database-->
+    private string saveMessage = "";
+
+    private bool showSaveConfirmation = false;
+    private bool showFlagDialog = false;
+
+    private void ClearFlag()
+    {
+        Sheet.FlagComment = "";
+        showFlagDialog = false;
+    }
+
+    <!--Autosave / unsaved-changes tracking-->
+    private int? savedId;
+    private string lastSavedSnapshot = "";
+    private string autoSaveStatus = "";
+    private bool showLeaveConfirmation = false;
+    private System.Threading.Timer? autoSaveTimer;
+
+    private string Snapshot() => System.Text.Json.JsonSerializer.Serialize(Sheet);
+
+    private async Task PersistAsync()
+    {
+        if (savedId is int id)
+        {
+            await QCAuditService.UpdateSheetAsync(id, Sheet);
+        }
+        else
+        {
+            savedId = await QCAuditService.SaveSheetAsync(Sheet, CurrentUserService.UserId);
+        }
+        lastSavedSnapshot = Snapshot();
+    }
+
+    private async Task AutoSaveTick()
+    {
+        if (Snapshot() == lastSavedSnapshot) return;
+
+        try
+        {
+            await PersistAsync();
+            autoSaveStatus = $"Autosaved at {DateTime.Now:h:mm:ss tt}";
+        }
+        catch (Exception ex)
+        {
+            autoSaveStatus = $"Autosave failed: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private void GoHome()
+    {
+        if (Snapshot() != lastSavedSnapshot)
+        {
+            showLeaveConfirmation = true;
+        }
+        else
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private async Task LeaveWithSaving()
+    {
+        await ConfirmSave();
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private void LeaveWithoutSaving()
+    {
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private string autosaveMode = "Interval";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUserService.EnsureInitializedAsync();
+
+        var editRequest = EditRequestService.Consume("Audit");
+        if (editRequest is not null)
+        {
+            var (id, payload) = editRequest.Value;
+            Sheet = (SheetData)payload;
+            savedId = id;
+        }
+        else if (string.IsNullOrWhiteSpace(Sheet.LoggedBy))
+        {
+            Sheet.LoggedBy = CurrentUserService.UserName;
+        }
+
+        lastSavedSnapshot = Snapshot();
+
+        var settings = await AutosaveSettingsService.GetSettingsAsync();
+        autosaveMode = settings.Mode;
+        if (autosaveMode == "Interval")
+        {
+            autoSaveTimer = new System.Threading.Timer(
+                _ => InvokeAsync(AutoSaveTick),
+                null,
+                TimeSpan.FromSeconds(settings.IntervalSeconds),
+                TimeSpan.FromSeconds(settings.IntervalSeconds));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && autosaveMode == "OnChange")
+        {
+            await AutoSaveTick();
+        }
+    }
+
+    public void Dispose()
+    {
+        autoSaveTimer?.Dispose();
+    }
+
+    private void SaveToDatabase()
+    {
+        showSaveConfirmation = true;
+    }
+
+    private async Task ConfirmSave()
+    {
+        try
+        {
+            await PersistAsync();
+            saveMessage = "Saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error: {ex.Message}";
+        }
+        showSaveConfirmation = false;
+    }
+
+    <!--Input Veriables-->
+    private SheetData Sheet = new();
+
+    public class SheetData
+    {
+        public string FlagComment { get; set; } = "";
+        public int? CreatedByUserId { get; set; }
+        public string? CreatedByName { get; set; }
+
+        // Header
+        public DateTime Date { get; set; } = DateTime.Now;
+        public TimeOnly Time { get; set; } = TimeOnly.MinValue;
+        public string LineNumber { get; set; } = "";
+        public string Shift { get; set; } = "";
+        public string Crew { get; set; } = "";
+        public string LoggedBy { get; set; } = "";
+
+        // Spec fields
+        public string FormulaCode { get; set; } = "";
+        public string ProductType { get; set; } = "";
+        public string Width { get; set; } = "";
+        public string Charting { get; set; } = "";
+        public string Counter { get; set; } = "";
+        public string LSL1 { get; set; } = "";
+        public string Target1 { get; set; } = "";
+        public string USL1 { get; set; } = "";
+        public string LSL2 { get; set; } = "";
+        public string Target2 { get; set; } = "";
+        public string USL2 { get; set; } = "";
+        public string OrderNumber { get; set; } = "";
+        public string NumPallets { get; set; } = "";
+
+        // Data rows — Barcode shared across rows 10–14
+        public string Barcode { get; set; } = "";
+
+        // Pallet rows 1–5 (share Barcode above, rows 10–14)
+        public string PalletNum1 { get; set; } = "";
+        public string Position1 { get; set; } = "";
+        public string Width1 { get; set; } = "";
+        public string CoreProtection1 { get; set; } = "";
+        public string GrossWeight1 { get; set; } = "";
+        public string Weight1_1 { get; set; } = "";
+        public string Weight1_2 { get; set; } = "";
+        public string Weight1_3 { get; set; } = "";
+        public string Weight1_4 { get; set; } = "";
+
+        public string PalletNum2 { get; set; } = "";
+        public string Position2 { get; set; } = "";
+        public string Width2 { get; set; } = "";
+        public string CoreProtection2 { get; set; } = "";
+        public string GrossWeight2 { get; set; } = "";
+        public string Weight2_1 { get; set; } = "";
+        public string Weight2_2 { get; set; } = "";
+        public string Weight2_3 { get; set; } = "";
+        public string Weight2_4 { get; set; } = "";
+
+        public string PalletNum3 { get; set; } = "";
+        public string Position3 { get; set; } = "";
+        public string Width3 { get; set; } = "";
+        public string CoreProtection3 { get; set; } = "";
+        public string GrossWeight3 { get; set; } = "";
+        public string Weight3_1 { get; set; } = "";
+        public string Weight3_2 { get; set; } = "";
+        public string Weight3_3 { get; set; } = "";
+        public string Weight3_4 { get; set; } = "";
+
+        public string PalletNum4 { get; set; } = "";
+        public string Position4 { get; set; } = "";
+        public string Width4 { get; set; } = "";
+        public string CoreProtection4 { get; set; } = "";
+        public string GrossWeight4 { get; set; } = "";
+        public string Weight4_1 { get; set; } = "";
+        public string Weight4_2 { get; set; } = "";
+        public string Weight4_3 { get; set; } = "";
+        public string Weight4_4 { get; set; } = "";
+
+        public string PalletNum5 { get; set; } = "";
+        public string Position5 { get; set; } = "";
+        public string Width5 { get; set; } = "";
+        public string CoreProtection5 { get; set; } = "";
+        public string GrossWeight5 { get; set; } = "";
+        public string Weight5_1 { get; set; } = "";
+        public string Weight5_2 { get; set; } = "";
+        public string Weight5_3 { get; set; } = "";
+        public string Weight5_4 { get; set; } = "";
+
+        // Row 15: Notify Production header + row 6
+        public string PalletNum6 { get; set; } = "";
+        public string Position6 { get; set; } = "";
+        public string Width6 { get; set; } = "";
+        public string CoreProtection6 { get; set; } = "";
+        public string GrossWeight6 { get; set; } = "";
+        public string Weight6_1 { get; set; } = "";
+        public string Weight6_2 { get; set; } = "";
+        public string Weight6_3 { get; set; } = "";
+        public string Weight6_4 { get; set; } = "";
+
+        // Rows 16–20: Notify field spans these; rows 7–11
+        public string Notify { get; set; } = "";
+
+        public string PalletNum7 { get; set; } = "";
+        public string Position7 { get; set; } = "";
+        public string Width7 { get; set; } = "";
+        public string CoreProtection7 { get; set; } = "";
+        public string GrossWeight7 { get; set; } = "";
+        public string Weight7_1 { get; set; } = "";
+        public string Weight7_2 { get; set; } = "";
+        public string Weight7_3 { get; set; } = "";
+        public string Weight7_4 { get; set; } = "";
+
+        public string PalletNum8 { get; set; } = "";
+        public string Position8 { get; set; } = "";
+        public string Width8 { get; set; } = "";
+        public string CoreProtection8 { get; set; } = "";
+        public string GrossWeight8 { get; set; } = "";
+        public string Weight8_1 { get; set; } = "";
+        public string Weight8_2 { get; set; } = "";
+        public string Weight8_3 { get; set; } = "";
+        public string Weight8_4 { get; set; } = "";
+
+        public string PalletNum9 { get; set; } = "";
+        public string Position9 { get; set; } = "";
+        public string Width9 { get; set; } = "";
+        public string CoreProtection9 { get; set; } = "";
+        public string GrossWeight9 { get; set; } = "";
+        public string Weight9_1 { get; set; } = "";
+        public string Weight9_2 { get; set; } = "";
+        public string Weight9_3 { get; set; } = "";
+        public string Weight9_4 { get; set; } = "";
+
+        public string PalletNum10 { get; set; } = "";
+        public string Position10 { get; set; } = "";
+        public string Width10 { get; set; } = "";
+        public string CoreProtection10 { get; set; } = "";
+        public string GrossWeight10 { get; set; } = "";
+        public string Weight10_1 { get; set; } = "";
+        public string Weight10_2 { get; set; } = "";
+        public string Weight10_3 { get; set; } = "";
+        public string Weight10_4 { get; set; } = "";
+
+        public string PalletNum11 { get; set; } = "";
+        public string Position11 { get; set; } = "";
+        public string Width11 { get; set; } = "";
+        public string CoreProtection11 { get; set; } = "";
+        public string GrossWeight11 { get; set; } = "";
+        public string Weight11_1 { get; set; } = "";
+        public string Weight11_2 { get; set; } = "";
+        public string Weight11_3 { get; set; } = "";
+        public string Weight11_4 { get; set; } = "";
+
+        // Charting Instructions section
+        public string Web { get; set; } = "";
+        public string PackingCode { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public string PalletType { get; set; } = "";
+        public string BoxNum { get; set; } = "";
+        public string Die { get; set; } = "";
+        public string LayersPallet { get; set; } = "";
+        public string Product { get; set; } = "";
+        public string BoxLabel { get; set; } = "";
+        public string QCTestRollPos { get; set; } = "";
+        public string RLS { get; set; } = "";
+        public string ExPalletTicket { get; set; } = "";
+        public string Pallets { get; set; } = "";
+        public string PW { get; set; } = "";
+        public string Size { get; set; } = "";
+        public string Condition { get; set; } = "";
+        public string Tail { get; set; } = "";
+
+        // Special Instructions
+        public string SpecialInstructions { get; set; } = "";
+        public string HandCling { get; set; } = "";
+        public string PullTest { get; set; } = "";
+
+        // Operator Paperwork
+        public string AuditTesting { get; set; } = "";
+        public string Weights { get; set; } = "";
+        public string Widths { get; set; } = "";
+        public string UsingBoxCoreSticker { get; set; } = "";
+        public string VisualDefects { get; set; } = "";
+        public string CoreCrushTest { get; set; } = "";
+        public string FollowUp { get; set; } = "";
+    }
+
+    private async Task ExportToExcel()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Stretch Film Reel Audit Log");
+        sb.AppendLine($"Date,{Esc(Sheet.Date.ToString("yyyy-MM-dd"))},Time,{Esc(Sheet.Time == TimeOnly.MinValue ? "" : Sheet.Time.ToString("HH:mm"))},Line,{Esc(Sheet.LineNumber)},Shift,{Esc(Sheet.Shift)},Crew,{Esc(Sheet.Crew)}");
+        sb.AppendLine($"Formula Code,{Esc(Sheet.FormulaCode)},Product Type,{Esc(Sheet.ProductType)},Width,{Esc(Sheet.Width)}");
+        sb.AppendLine($"Footage (Charting),{Esc(Sheet.Charting)},Footage (Counter),{Esc(Sheet.Counter)}");
+        sb.AppendLine($"Weight Spec LSL 1,{Esc(Sheet.LSL1)},Target 1,{Esc(Sheet.Target1)},USL 1,{Esc(Sheet.USL1)}");
+        sb.AppendLine($"Weight Spec LSL 2,{Esc(Sheet.LSL2)},Target 2,{Esc(Sheet.Target2)},USL 2,{Esc(Sheet.USL2)}");
+        sb.AppendLine($"Order Number,{Esc(Sheet.OrderNumber)},# of Pallets,{Esc(Sheet.NumPallets)},Barcode,{Esc(Sheet.Barcode)}");
+        sb.AppendLine($"Notify Production,{Esc(Sheet.Notify)}");
+        sb.AppendLine();
+        sb.AppendLine("Charting Instructions");
+        sb.AppendLine($"Web,{Esc(Sheet.Web)},Packing Code,{Esc(Sheet.PackingCode)},Unit,{Esc(Sheet.Unit)},Box #,{Esc(Sheet.BoxNum)},Die,{Esc(Sheet.Die)}");
+        sb.AppendLine($"Layers/Pallet,{Esc(Sheet.LayersPallet)},Product,{Esc(Sheet.Product)},Box Label,{Esc(Sheet.BoxLabel)},QC Test Roll Pos,{Esc(Sheet.QCTestRollPos)}");
+        sb.AppendLine($"RLS/CS/PLT,{Esc(Sheet.RLS)},Ex. Pallet Ticket,{Esc(Sheet.ExPalletTicket)},Pallets,{Esc(Sheet.PalletType)},PW,{Esc(Sheet.PW)}");
+        sb.AppendLine($"Size,{Esc(Sheet.Size)},Condition,{Esc(Sheet.Condition)},Tail #,{Esc(Sheet.Tail)}");
+        sb.AppendLine();
+        sb.AppendLine("Pallet Data");
+        sb.AppendLine("Pallet #,Pos.,Width,Core Prot.,Gross Weight,W#1,W#2,W#3,W#4");
+        var pallets = new[]
+        {
+            new[] { Sheet.PalletNum1,  Sheet.Position1,  Sheet.Width1,  Sheet.CoreProtection1,  Sheet.GrossWeight1,  Sheet.Weight1_1,  Sheet.Weight1_2,  Sheet.Weight1_3,  Sheet.Weight1_4  },
+            new[] { Sheet.PalletNum2,  Sheet.Position2,  Sheet.Width2,  Sheet.CoreProtection2,  Sheet.GrossWeight2,  Sheet.Weight2_1,  Sheet.Weight2_2,  Sheet.Weight2_3,  Sheet.Weight2_4  },
+            new[] { Sheet.PalletNum3,  Sheet.Position3,  Sheet.Width3,  Sheet.CoreProtection3,  Sheet.GrossWeight3,  Sheet.Weight3_1,  Sheet.Weight3_2,  Sheet.Weight3_3,  Sheet.Weight3_4  },
+            new[] { Sheet.PalletNum4,  Sheet.Position4,  Sheet.Width4,  Sheet.CoreProtection4,  Sheet.GrossWeight4,  Sheet.Weight4_1,  Sheet.Weight4_2,  Sheet.Weight4_3,  Sheet.Weight4_4  },
+            new[] { Sheet.PalletNum5,  Sheet.Position5,  Sheet.Width5,  Sheet.CoreProtection5,  Sheet.GrossWeight5,  Sheet.Weight5_1,  Sheet.Weight5_2,  Sheet.Weight5_3,  Sheet.Weight5_4  },
+            new[] { Sheet.PalletNum6,  Sheet.Position6,  Sheet.Width6,  Sheet.CoreProtection6,  Sheet.GrossWeight6,  Sheet.Weight6_1,  Sheet.Weight6_2,  Sheet.Weight6_3,  Sheet.Weight6_4  },
+            new[] { Sheet.PalletNum7,  Sheet.Position7,  Sheet.Width7,  Sheet.CoreProtection7,  Sheet.GrossWeight7,  Sheet.Weight7_1,  Sheet.Weight7_2,  Sheet.Weight7_3,  Sheet.Weight7_4  },
+            new[] { Sheet.PalletNum8,  Sheet.Position8,  Sheet.Width8,  Sheet.CoreProtection8,  Sheet.GrossWeight8,  Sheet.Weight8_1,  Sheet.Weight8_2,  Sheet.Weight8_3,  Sheet.Weight8_4  },
+            new[] { Sheet.PalletNum9,  Sheet.Position9,  Sheet.Width9,  Sheet.CoreProtection9,  Sheet.GrossWeight9,  Sheet.Weight9_1,  Sheet.Weight9_2,  Sheet.Weight9_3,  Sheet.Weight9_4  },
+            new[] { Sheet.PalletNum10, Sheet.Position10, Sheet.Width10, Sheet.CoreProtection10, Sheet.GrossWeight10, Sheet.Weight10_1, Sheet.Weight10_2, Sheet.Weight10_3, Sheet.Weight10_4 },
+            new[] { Sheet.PalletNum11, Sheet.Position11, Sheet.Width11, Sheet.CoreProtection11, Sheet.GrossWeight11, Sheet.Weight11_1, Sheet.Weight11_2, Sheet.Weight11_3, Sheet.Weight11_4 },
+        };
+        foreach (var p in pallets)
+        {
+            if (p.Any(v => !string.IsNullOrWhiteSpace(v)))
+                sb.AppendLine(string.Join(",", p.Select(v => Esc(v))));
+        }
+        await JS.InvokeVoidAsync("downloadFile", "StretchFilmReelAuditLog.csv", sb.ToString(), "text/csv;charset=utf-8;");
+    }
+
+    private async Task ExportToPdf()
+    {
+        await JS.InvokeVoidAsync("printPage");
+    }
+
+    private static string Esc(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        return s;
+    }
+}

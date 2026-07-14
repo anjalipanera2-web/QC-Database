@@ -1,0 +1,41 @@
+# Build results
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+
+# Visual Studio
+.vs/
+.vscode/
+*.sln.user
+*.user
+*.userosscache
+*.sln.docstates
+
+# Configuration files with sensitive data
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+web.config
+
+# Environment variables
+.env
+.env.local
+
+# Dependencies
+node_modules/
+packages/
+
+# Database
+*.mdf
+*.ldf
+*.db
+
+# IDE
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

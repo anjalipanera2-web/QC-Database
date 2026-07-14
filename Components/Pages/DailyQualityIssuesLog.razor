@@ -1,0 +1,363 @@
+@page "/daily-quality-issues-log"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@implements IDisposable
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject IJSRuntime JS
+@inject DailyQualityIssuesService DailyQualityIssuesService
+@inject QCTestLogService QCTestLogService
+@inject QCAuditService QCAuditService
+@inject AutosaveSettingsService AutosaveSettingsService
+@inject CurrentUserService CurrentUserService
+
+<PageTitle>Daily Quality Issues Log</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">AMTOPP Corporation — CFP Plant — Daily Quality Issues</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+    @if (!CurrentUserService.IsMaster)
+    {
+        <p class="history-empty" style="margin: 8px 0 0;">View only — only a master user can edit the Daily Quality Issues Log.</p>
+    }
+
+    <fieldset class="fieldset-reset" disabled="@(!CurrentUserService.IsMaster)">
+        <!--Header field tiles-->
+        <div style="padding: 10px 10px 2px;">
+            <table class="field-table">
+                <tr>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Date</div>
+                            <input type="date" value="@Sheet.Date.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" class="f-input" />
+                        </div>
+                    </td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Shift</div>
+                            <select @bind="Sheet.Shift" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="Day">Day</option>
+                                <option value="Night">Night</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Crew</div>
+                            <select @bind="Sheet.Crew" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="table-scroll-wrapper">
+            <table class="sheet-table">
+                <thead>
+                    <tr class="header-row-1">
+                        <th>Line</th>
+                        <th>Film Type</th>
+                        <th>Quality Issues</th>
+                        <th>Audit Notes</th>
+                        <th>Layers</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Lines)
+                    {
+                        <tr class="data-row">
+                            <td class="text-center" style="font-weight: 700; color: #1a3a5c; background-color: #f8f9fa;">@line.LineName</td>
+                            <td><input type="text" @bind="line.FilmType" placeholder="Film Type" class="cell-input wide-input" /></td>
+                            <td><input type="text" @bind="line.QualityIssues" placeholder="Quality Issues" class="cell-input wide-input" /></td>
+                            <td><input type="text" @bind="line.AuditNotes" placeholder="Audit Notes" class="cell-input wide-input" /></td>
+                            <td><input type="text" @bind="line.Layers" placeholder="Layers" class="cell-input wide-input" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </fieldset>
+
+    <!--Buttons-->
+    <div class="row-controls">
+        @if (CurrentUserService.IsMaster)
+        {
+            <button class="btn-add" @onclick="SaveToDatabase">Save</button>
+            <span>@saveMessage</span>
+            <span class="autosave-status">@autoSaveStatus</span>
+        }
+        <div class="export-controls">
+            <button class="btn-export-excel" @onclick="ExportToExcel">↓ Export Excel</button>
+            <button class="btn-export-pdf" @onclick="ExportToPdf">↓ Export PDF</button>
+        </div>
+    </div>
+
+    <!--Save Confirmation Dialog-->
+    @if (showSaveConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Confirm Save</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>Are you sure you want to save this log to the database?</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showSaveConfirmation = false">Cancel</button>
+                    <button class="btn-add" @onclick="ConfirmSave">Yes, Save</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Unsaved Changes Confirmation (Back button)-->
+    @if (showLeaveConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Unsaved Changes</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>You have unsaved changes on this sheet. Save before leaving?</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showLeaveConfirmation = false">Cancel</button>
+                    <button class="btn-danger" @onclick="LeaveWithoutSaving">Discard &amp; Leave</button>
+                    <button class="btn-add" @onclick="LeaveWithSaving">Save &amp; Leave</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DailyQualityIssuesService.SheetHeader Sheet = new();
+    private List<DailyQualityIssuesService.LineEntry> Lines = DailyQualityIssuesService.BuildDefaultLines();
+
+    private string saveMessage = "";
+    private bool showSaveConfirmation = false;
+
+    <!--Autosave / unsaved-changes tracking-->
+    private int? savedId;
+    private string lastSavedSnapshot = "";
+    private string autoSaveStatus = "";
+    private bool showLeaveConfirmation = false;
+    private System.Threading.Timer? autoSaveTimer;
+    private string autosaveMode = "Interval";
+
+    private string Snapshot() => System.Text.Json.JsonSerializer.Serialize(new { Sheet, Lines });
+
+    private async Task PersistAsync()
+    {
+        if (savedId is int id)
+        {
+            await DailyQualityIssuesService.UpdateSheetAsync(id, Sheet, Lines);
+        }
+        else
+        {
+            savedId = await DailyQualityIssuesService.SaveSheetAsync(Sheet, Lines);
+        }
+        lastSavedSnapshot = Snapshot();
+    }
+
+    private async Task AutoSaveTick()
+    {
+        if (Snapshot() == lastSavedSnapshot) return;
+
+        try
+        {
+            await PersistAsync();
+            autoSaveStatus = $"Autosaved at {DateTime.Now:h:mm:ss tt}";
+        }
+        catch (Exception ex)
+        {
+            autoSaveStatus = $"Autosave failed: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task AutofillFromTestLog()
+    {
+        foreach (var line in Lines)
+        {
+            var filmType = await QCTestLogService.GetFilmTypeForLineAndDateAsync(line.LineName, Sheet.Date);
+            if (!string.IsNullOrWhiteSpace(filmType))
+            {
+                line.FilmType = filmType;
+            }
+
+            var flagComment = await QCTestLogService.GetFlagCommentForLineAndDateAsync(line.LineName, Sheet.Date);
+            if (!string.IsNullOrWhiteSpace(flagComment))
+            {
+                line.QualityIssues = flagComment;
+            }
+
+            var auditFlagComment = await QCAuditService.GetFlagCommentForLineAndDateAsync(line.LineName, Sheet.Date);
+            if (!string.IsNullOrWhiteSpace(auditFlagComment))
+            {
+                line.AuditNotes = auditFlagComment;
+            }
+        }
+
+        var (shift, crew) = await QCTestLogService.GetShiftAndCrewForDateAsync(Sheet.Date);
+        if (!string.IsNullOrWhiteSpace(shift)) Sheet.Shift = shift;
+        if (!string.IsNullOrWhiteSpace(crew)) Sheet.Crew = crew;
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        if (!DateTime.TryParse(e.Value?.ToString(), out var newDate)) return;
+
+        await LoadOrCreateForDateAsync(newDate);
+        StateHasChanged();
+    }
+
+    private async Task LoadOrCreateForDateAsync(DateTime selectedDate)
+    {
+        if (Snapshot() != lastSavedSnapshot)
+        {
+            await PersistAsync();
+        }
+
+        var existing = await DailyQualityIssuesService.GetSheetByDateAsync(selectedDate);
+        if (existing is not null)
+        {
+            var (id, header, lines) = existing.Value;
+            Sheet = header;
+            Lines = lines;
+            savedId = id;
+        }
+        else
+        {
+            Sheet = new DailyQualityIssuesService.SheetHeader { Date = selectedDate };
+            Lines = DailyQualityIssuesService.BuildDefaultLines();
+            savedId = null;
+        }
+
+        await AutofillFromTestLog();
+
+        lastSavedSnapshot = Snapshot();
+    }
+
+    private void SaveToDatabase()
+    {
+        showSaveConfirmation = true;
+    }
+
+    private async Task ConfirmSave()
+    {
+        try
+        {
+            await PersistAsync();
+            saveMessage = "Saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error: {ex.Message}";
+        }
+        showSaveConfirmation = false;
+    }
+
+    private void GoHome()
+    {
+        if (Snapshot() != lastSavedSnapshot)
+        {
+            showLeaveConfirmation = true;
+        }
+        else
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private async Task LeaveWithSaving()
+    {
+        await ConfirmSave();
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private void LeaveWithoutSaving()
+    {
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUserService.EnsureInitializedAsync();
+
+        var existing = await DailyQualityIssuesService.GetSheetByDateAsync(Sheet.Date);
+        if (existing is not null)
+        {
+            var (id, header, lines) = existing.Value;
+            Sheet = header;
+            Lines = lines;
+            savedId = id;
+        }
+
+        await AutofillFromTestLog();
+
+        lastSavedSnapshot = Snapshot();
+
+        if (!CurrentUserService.IsMaster) return;
+
+        var settings = await AutosaveSettingsService.GetSettingsAsync();
+        autosaveMode = settings.Mode;
+        if (autosaveMode == "Interval")
+        {
+            autoSaveTimer = new System.Threading.Timer(
+                _ => InvokeAsync(AutoSaveTick),
+                null,
+                TimeSpan.FromSeconds(settings.IntervalSeconds),
+                TimeSpan.FromSeconds(settings.IntervalSeconds));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && CurrentUserService.IsMaster && autosaveMode == "OnChange")
+        {
+            await AutoSaveTick();
+        }
+    }
+
+    public void Dispose()
+    {
+        autoSaveTimer?.Dispose();
+    }
+
+    private static string Esc(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        return s;
+    }
+
+    private async Task ExportToExcel()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("AMTOPP Corporation - CFP Plant - Daily Quality Issues");
+        sb.AppendLine($"Date,{Esc(Sheet.Date.ToString("yyyy-MM-dd"))},Shift,{Esc(Sheet.Shift)},Crew,{Esc(Sheet.Crew)}");
+        sb.AppendLine();
+        sb.AppendLine("Line,Film Type,Quality Issues,Audit Notes,Layers");
+        foreach (var line in Lines)
+        {
+            sb.AppendLine(string.Join(",", Esc(line.LineName), Esc(line.FilmType), Esc(line.QualityIssues), Esc(line.AuditNotes), Esc(line.Layers)));
+        }
+        await JS.InvokeVoidAsync("downloadFile", "DailyQualityIssuesLog.csv", sb.ToString(), "text/csv;charset=utf-8;");
+    }
+
+    private async Task ExportToPdf()
+    {
+        await JS.InvokeVoidAsync("printPage");
+    }
+}

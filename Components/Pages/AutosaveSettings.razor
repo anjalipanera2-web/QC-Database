@@ -1,0 +1,118 @@
+@page "/autosave-settings"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject AutosaveSettingsService AutosaveSettingsService
+
+<PageTitle>Autosave Settings</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Autosave Settings</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+
+    <div style="padding: 16px 20px;">
+        <p style="margin-bottom: 14px; color: #446688; font-size: 12px;">
+            Controls how often the Operator, Test Result, and Audit sheets automatically save your work in the background
+            while you're editing them.
+        </p>
+
+        <div class="field-group">
+            <div class="field-group-label">Mode</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1" @onclick="SelectIntervalMode" style="cursor: pointer;">
+                        <div class="f-tile">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="mode" checked="@(mode == "Interval")" @onchange="SelectIntervalMode" />
+                                <span>
+                                    <div class="f-label" style="margin-bottom: 2px;">On a Timer</div>
+                                    Autosave every N seconds, regardless of how much was edited.
+                                </span>
+                            </label>
+                        </div>
+                    </td>
+                    <td class="band-1" @onclick="SelectOnChangeMode" style="cursor: pointer;">
+                        <div class="f-tile">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="mode" checked="@(mode == "OnChange")" @onchange="SelectOnChangeMode" />
+                                <span>
+                                    <div class="f-label" style="margin-bottom: 2px;">On Every Edit</div>
+                                    Autosave right after each field is changed (e.g. a text box loses focus with new text).
+                                </span>
+                            </label>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        @if (mode == "Interval")
+        {
+            <div class="field-group">
+                <div class="field-group-label">Interval</div>
+                <table class="field-table">
+                    <tr>
+                        <td class="band-2">
+                            <div class="f-tile">
+                                <div class="f-label">Preset</div>
+                                <select class="f-input" @bind="intervalSeconds">
+                                    <option value="15">Every 15 seconds</option>
+                                    <option value="30">Every 30 seconds</option>
+                                    <option value="60">Every 1 minute</option>
+                                    <option value="120">Every 2 minutes</option>
+                                    <option value="300">Every 5 minutes</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td class="band-2">
+                            <div class="f-tile">
+                                <div class="f-label">Or Custom (Seconds)</div>
+                                <input type="number" min="5" class="f-input" @bind="intervalSeconds" />
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        }
+
+        <div class="row-controls" style="margin-top: 10px;">
+            <button class="btn-add" @onclick="Save" disabled="@isSaving">Save Settings</button>
+            <span>@statusMessage</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string mode = "Interval";
+    private int intervalSeconds = 30;
+    private string statusMessage = "";
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await AutosaveSettingsService.GetSettingsAsync();
+        mode = settings.Mode;
+        intervalSeconds = settings.IntervalSeconds;
+    }
+
+    private async Task Save()
+    {
+        isSaving = true;
+        try
+        {
+            var seconds = Math.Max(5, intervalSeconds);
+            await AutosaveSettingsService.SaveSettingsAsync(mode, seconds);
+            statusMessage = "Saved. Open sheets will pick this up next time they're loaded.";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+        }
+        isSaving = false;
+    }
+
+    private void SelectIntervalMode() => mode = "Interval";
+    private void SelectOnChangeMode() => mode = "OnChange";
+
+    private void GoHome() => Nav.NavigateTo("/");
+}

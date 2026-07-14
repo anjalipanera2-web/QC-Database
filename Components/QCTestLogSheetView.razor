@@ -1,0 +1,207 @@
+@using ProductionSheet.Components.Pages
+
+@if (!string.IsNullOrWhiteSpace(Header.FlagComment))
+{
+    <div class="set-notes">
+        <div class="set-note"><strong>🚩 Flagged:</strong> @Header.FlagComment</div>
+    </div>
+}
+
+<div class="table-scroll-wrapper">
+    <table class="sheet-table view-only-table">
+        <thead>
+            <!--Row 1: Date, Specifications-->
+            <tr class="header-row-1">
+                <th rowspan="3" class="text-center" style="vertical-align: middle; width: 40px;">#</th>
+                <th colspan="1">Date</th>
+                <td colspan="3"><input type="text" readonly value="@Header.Date.ToString("yyyy-MM-dd")" class="cell-input wide-input" /></td>
+                <th colspan="11">Specifications</th>
+            </tr>
+            <!--Row 2: QC Tech, USL 1-4, Spec 1-6, Film Type-->
+            <tr class="header-row-2">
+                <th rowspan="2">QC Tech:</th>
+                <td rowspan="2" colspan="3"><input type="text" readonly value="@Header.QCTech" class="cell-input wide-input" /></td>
+                <th rowspan="2">USL</th>
+                <td><input type="text" readonly value="@Header.USL1" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.USL2" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.USL3" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.USL4" class="cell-input wide-input" /></td>
+                <td rowspan="6"><textarea readonly class="cell-input wide-input">@Header.Spec1</textarea></td>
+                <td rowspan="6"><textarea readonly class="cell-input wide-input">@Header.Spec2</textarea></td>
+                <td rowspan="6"><textarea readonly class="cell-input wide-input">@Header.Spec3</textarea></td>
+                <td rowspan="6"><textarea readonly class="cell-input wide-input">@Header.Spec4</textarea></td>
+                <td rowspan="6"><textarea readonly class="cell-input wide-input">@Header.Spec5</textarea></td>
+                <td rowspan="6"><textarea readonly class="cell-input wide-input">@Header.Spec6</textarea></td>
+                <th colspan="2">Film Type</th>
+            </tr>
+            <!--Row 3: USL 5-8, Film Type-->
+            <tr class="header-row-3">
+                <td><input type="text" readonly value="@Header.USL5" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.USL6" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.USL7" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.USL8" class="cell-input wide-input" /></td>
+                <td colspan="2"><input type="text" readonly value="@Header.FilmType" class="cell-input wide-input" /></td>
+            </tr>
+            <!--Row 4: Shift, Crew, Target 1-4, Gauge-->
+            <tr class="header-row-4">
+                <th rowspan="7" colspan="1" style="background-color: #f8f9fa;"></th>
+                <th>Shift</th>
+                <td><input type="text" readonly value="@Header.Shift" class="cell-input wide-input" /></td>
+                <th>Crew</th>
+                <td><input type="text" readonly value="@Header.Crew" class="cell-input wide-input" /></td>
+                <th rowspan="2">Target</th>
+                <td><input type="text" readonly value="@Header.Target1" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target2" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target3" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target4" class="cell-input wide-input" /></td>
+                <th colspan="2">Gauge</th>
+            </tr>
+            <!--Row 5: Line, Target 5-8, Gauge-->
+            <tr class="header-row-5">
+                <th>Line</th>
+                <td colspan="3"><input type="text" readonly value="@Header.Line" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target5" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target6" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target7" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.Target8" class="cell-input wide-input" /></td>
+                <td colspan="2"><input type="text" readonly value="@Header.Gauge" class="cell-input wide-input" /></td>
+            </tr>
+            <!--Row 6: LSL 1-4, Formula-->
+            <tr class="header-row-6">
+                <th rowspan="2" colspan="4"></th>
+                <th rowspan="2">LSL</th>
+                <td><input type="text" readonly value="@Header.LSL1" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.LSL2" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.LSL3" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.LSL4" class="cell-input wide-input" /></td>
+                <th colspan="2">Formula</th>
+            </tr>
+            <!--Row 7: LSL 5-8, Formula Input-->
+            <tr class="header-row-7">
+                <td><input type="text" readonly value="@Header.LSL5" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.LSL6" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.LSL7" class="cell-input wide-input" /></td>
+                <td><input type="text" readonly value="@Header.LSL8" class="cell-input wide-input" /></td>
+                <td colspan="2"><input type="text" readonly value="@Header.Formula" class="cell-input wide-input" /></td>
+            </tr>
+            <!--Row 8: Column Labels-->
+            <tr class="header-row-8">
+                <th rowspan="3">Sample Time</th>
+                <th rowspan="3">Test Time</th>
+                <th rowspan="3">Roll Width</th>
+                <th rowspan="3">Test Roll Width</th>
+                <th rowspan="3">Pos.</th>
+                <th rowspan="3">Roll weight</th>
+                <th rowspan="3">Ultimate Stretch %</th>
+                <th rowspan="2">Average Stretch %</th>
+                <th rowspan="3">Unwind</th>
+                <th rowspan="3">Avg. Cling</th>
+                <th rowspan="1">Puncture</th>
+                <th rowspan="2">PW</th>
+                <th rowspan="3">Avg Thickness</th>
+                <th rowspan="2">Haze Lt. Trans.</th>
+                <th rowspan="3">Gel Count</th>
+                <th rowspan="3">Roll / Film Visuals / Remarks</th>
+                <th rowspan="3">Roll Status</th>
+            </tr>
+            <!--Row 9: Labels-->
+            <tr class="header-row-9">
+                <th>Stdv.</th>
+            </tr>
+            <!--Row 10: Labels-->
+            <tr class="header-row-10">
+                <th>Stretch Force</th>
+                <th># of Punct.</th>
+                <th>Tail</th>
+                <th>Stdv.</th>
+            </tr>
+        </thead>
+        @for (int i = 0; i < Rows.Count; i++)
+        {
+            var row = Rows[i];
+            <tbody>
+                <tr class="data-row-1">
+                    <td rowspan="4" class="text-center" style="vertical-align: middle; background-color: #f8f9fa;">@(i + 1)</td>
+                    <td rowspan="2"><div class="time-input">@row.SampleTime.ToString("HH:mm")</div></td>
+                    <td rowspan="2"><div class="time-input">@row.TestTime.ToString("HH:mm")</div></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.RollWidth" class="cell-input wide-input" /></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.TestRollWidth" class="cell-input wide-input" /></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.Position" class="cell-input wide-input" /></td>
+                    <td rowspan="4">
+                        <div class="width-cell">
+                            <input type="text" readonly value="@row.RollWeight" class="cell-input wide-input" />
+                            @RenderManualSpecTag(row.RollWeight)
+                        </div>
+                    </td>
+                    <td rowspan="4"><input type="text" readonly value="@row.StretchP" class="cell-input wide-input" /></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.AvgStretch" class="cell-input wide-input" /></td>
+                    <td rowspan="4"><input type="text" readonly value="@row.Unwind" class="cell-input wide-input" /></td>
+                    <th>Out</th>
+                    <td><input type="text" readonly value="@row.Puncture" class="cell-input wide-input" /></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.PW" class="cell-input wide-input" /></td>
+                    <td rowspan="4">
+                        <div class="width-cell">
+                            <input type="text" readonly value="@row.ThicknessOuter1" placeholder="Outer" class="cell-input wide-input" />
+                            <input type="text" readonly value="@row.ThicknessMiddle" placeholder="Middle" class="cell-input wide-input" />
+                            <input type="text" readonly value="@row.ThicknessOuter2" placeholder="Outer" class="cell-input wide-input" />
+                            <input type="text" readonly value="@row.AvgThickness" placeholder="Avg Thickness" class="cell-input wide-input computed-cell" />
+                        </div>
+                    </td>
+                    <td rowspan="2"><input type="text" readonly value="@row.LtTransm" class="cell-input wide-input" /></td>
+                    <td rowspan="4"><textarea readonly class="cell-input wide-input">@row.GelCount</textarea></td>
+                    <td rowspan="4"><textarea readonly class="cell-input wide-input">@row.Remarks</textarea></td>
+                    <td rowspan="4"><textarea readonly class="cell-input wide-input">@row.RollStatus</textarea></td>
+                </tr>
+                <tr class="data-row-2">
+                    <td><input type="text" readonly value="@(string.IsNullOrEmpty(row.OutClingGrade) ? "None" : row.OutClingGrade)" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.PunStdv" class="cell-input wide-input" /></td>
+                </tr>
+                <tr class="data-row-3">
+                    <th rowspan="2">Barcode #</th>
+                    <td colspan="3" rowspan="2"><input type="text" readonly value="@row.Barcode" class="cell-input wide-input" /></td>
+                    <th>Pallet #</th>
+                    <td rowspan="2"><input type="text" readonly value="@row.StretchForce" class="cell-input wide-input" /></td>
+                    <th>In</th>
+                    <td rowspan="2"><input type="text" readonly value="@row.NumPunct" class="cell-input wide-input" /></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.Tail" class="cell-input wide-input" /></td>
+                    <td rowspan="2"><input type="text" readonly value="@row.HazeStdv" class="cell-input wide-input" /></td>
+                </tr>
+                <tr class="data-row-4">
+                    <td><input type="text" readonly value="@row.PalletNum" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@(string.IsNullOrEmpty(row.InClingGrade) ? "None" : row.InClingGrade)" class="cell-input wide-input" /></td>
+                </tr>
+            </tbody>
+        }
+    </table>
+</div>
+
+@code {
+    [Parameter] public QCTestLogClassic.SheetHeader Header { get; set; } = new();
+    [Parameter] public List<QCTestLogClassic.SheetRow> Rows { get; set; } = new();
+
+    private bool? IsWithinManualSpec(string value)
+    {
+        if (string.IsNullOrWhiteSpace(Header.LSL1) && string.IsNullOrWhiteSpace(Header.USL1))
+            return null;
+
+        if (!decimal.TryParse(value, out var actual))
+            return null;
+
+        if (decimal.TryParse(Header.LSL1, out var lsl) && actual < lsl)
+            return false;
+        if (decimal.TryParse(Header.USL1, out var usl) && actual > usl)
+            return false;
+
+        return true;
+    }
+
+    private RenderFragment RenderManualSpecTag(string value) => @<text>
+        @{ var status = IsWithinManualSpec(value); }
+        @if (status is not null)
+        {
+            <span class="set-tag @(status == false ? "no-match" : "")">
+                <span class="dot"></span>@(status == true ? "In Spec" : "Out of Spec")
+            </span>
+        }
+    </text>;
+}

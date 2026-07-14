@@ -1,0 +1,178 @@
+@using ProductionSheet.Components.Pages
+
+@if (!string.IsNullOrWhiteSpace(Sheet.FlagComment))
+{
+    <div class="set-notes">
+        <div class="set-note"><strong>🚩 Flagged:</strong> @Sheet.FlagComment</div>
+    </div>
+}
+
+<div style="padding: 10px 10px 2px;">
+    <div class="field-group">
+        <div class="field-group-label">Sheet Info</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Date</div><input type="text" readonly value="@Sheet.Date.ToString("yyyy-MM-dd")" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Time</div><input type="text" readonly value="@(Sheet.Time == TimeOnly.MinValue ? "" : Sheet.Time.ToString("HH:mm"))" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Line</div><input type="text" readonly value="@Sheet.LineNumber" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Shift</div><input type="text" readonly value="@Sheet.Shift" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Crew</div><input type="text" readonly value="@Sheet.Crew" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Product</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Formula Code</div><input type="text" readonly value="@Sheet.FormulaCode" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Product Type</div><input type="text" readonly value="@Sheet.ProductType" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Width</div><input type="text" readonly value="@Sheet.Width" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Footage (Charting)</div><input type="text" readonly value="@Sheet.Charting" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Footage (Counter)</div><input type="text" readonly value="@Sheet.Counter" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Weight Spec 1</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-3"><div class="f-tile"><div class="f-label">LSL</div><input type="text" readonly value="@Sheet.LSL1" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">Target</div><input type="text" readonly value="@Sheet.Target1" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">USL</div><input type="text" readonly value="@Sheet.USL1" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Weight Spec 2</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-3"><div class="f-tile"><div class="f-label">LSL</div><input type="text" readonly value="@Sheet.LSL2" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">Target</div><input type="text" readonly value="@Sheet.Target2" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">USL</div><input type="text" readonly value="@Sheet.USL2" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Order</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Order Number</div><input type="text" readonly value="@Sheet.OrderNumber" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label"># of Pallets</div><input type="text" readonly value="@Sheet.NumPallets" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Barcode</div><input type="text" readonly value="@Sheet.Barcode" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Notify Production</div><input type="text" readonly value="@Sheet.Notify" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="table-scroll-wrapper">
+    <table class="sheet-table view-only-table">
+        <thead>
+            <tr class="header-row-9">
+                <th>Pallet #</th>
+                <th>Pos.</th>
+                <th>Width</th>
+                <th>Core Prot.</th>
+                <th>Gross Weight</th>
+                <th>W#</th>
+                <th>W#</th>
+                <th>W#</th>
+                <th>W#</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Pallets)
+            {
+                <tr>
+                    <td><input type="text" readonly value="@p.PalletNum" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.Position" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.Width" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.CoreProtection" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.GrossWeight" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.W1" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.W2" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.W3" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@p.W4" class="cell-input wide-input" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div style="padding: 4px 10px 2px;">
+    <div class="field-group">
+        <div class="field-group-label">Charting Instructions</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Web</div><input type="text" readonly value="@Sheet.Web" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Packing Code</div><input type="text" readonly value="@Sheet.PackingCode" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Unit</div><input type="text" readonly value="@Sheet.Unit" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Box #</div><input type="text" readonly value="@Sheet.BoxNum" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Die</div><input type="text" readonly value="@Sheet.Die" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Roll Details</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Layers/Pallet</div><input type="text" readonly value="@Sheet.LayersPallet" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Product</div><input type="text" readonly value="@Sheet.Product" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">Box Label</div><input type="text" readonly value="@Sheet.BoxLabel" class="f-input" /></div></td>
+                <td class="band-2"><div class="f-tile"><div class="f-label">QC Test Roll Pos</div><input type="text" readonly value="@Sheet.QCTestRollPos" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Order Info</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-3"><div class="f-tile"><div class="f-label">RLS or CS/PLT</div><input type="text" readonly value="@Sheet.RLS" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">Ex. Pallet Ticket</div><input type="text" readonly value="@Sheet.ExPalletTicket" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">Pallets</div><input type="text" readonly value="@Sheet.PalletType" class="f-input" /></div></td>
+                <td class="band-3"><div class="f-tile"><div class="f-label">PW</div><input type="text" readonly value="@Sheet.PW" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="field-group">
+        <div class="field-group-label">Roll Condition</div>
+        <table class="field-table">
+            <tr>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Size</div><input type="text" readonly value="@Sheet.Size" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Condition</div><input type="text" readonly value="@Sheet.Condition" class="f-input" /></div></td>
+                <td class="band-1"><div class="f-tile"><div class="f-label">Tail #</div><input type="text" readonly value="@Sheet.Tail" class="f-input" /></div></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter] public StretchFilmReelAuditLog.SheetData Sheet { get; set; } = new();
+
+    private record PalletRow(string PalletNum, string Position, string Width, string CoreProtection, string GrossWeight, string W1, string W2, string W3, string W4);
+
+    private List<PalletRow> Pallets => new List<PalletRow>
+    {
+        new(Sheet.PalletNum1, Sheet.Position1, Sheet.Width1, Sheet.CoreProtection1, Sheet.GrossWeight1, Sheet.Weight1_1, Sheet.Weight1_2, Sheet.Weight1_3, Sheet.Weight1_4),
+        new(Sheet.PalletNum2, Sheet.Position2, Sheet.Width2, Sheet.CoreProtection2, Sheet.GrossWeight2, Sheet.Weight2_1, Sheet.Weight2_2, Sheet.Weight2_3, Sheet.Weight2_4),
+        new(Sheet.PalletNum3, Sheet.Position3, Sheet.Width3, Sheet.CoreProtection3, Sheet.GrossWeight3, Sheet.Weight3_1, Sheet.Weight3_2, Sheet.Weight3_3, Sheet.Weight3_4),
+        new(Sheet.PalletNum4, Sheet.Position4, Sheet.Width4, Sheet.CoreProtection4, Sheet.GrossWeight4, Sheet.Weight4_1, Sheet.Weight4_2, Sheet.Weight4_3, Sheet.Weight4_4),
+        new(Sheet.PalletNum5, Sheet.Position5, Sheet.Width5, Sheet.CoreProtection5, Sheet.GrossWeight5, Sheet.Weight5_1, Sheet.Weight5_2, Sheet.Weight5_3, Sheet.Weight5_4),
+        new(Sheet.PalletNum6, Sheet.Position6, Sheet.Width6, Sheet.CoreProtection6, Sheet.GrossWeight6, Sheet.Weight6_1, Sheet.Weight6_2, Sheet.Weight6_3, Sheet.Weight6_4),
+        new(Sheet.PalletNum7, Sheet.Position7, Sheet.Width7, Sheet.CoreProtection7, Sheet.GrossWeight7, Sheet.Weight7_1, Sheet.Weight7_2, Sheet.Weight7_3, Sheet.Weight7_4),
+        new(Sheet.PalletNum8, Sheet.Position8, Sheet.Width8, Sheet.CoreProtection8, Sheet.GrossWeight8, Sheet.Weight8_1, Sheet.Weight8_2, Sheet.Weight8_3, Sheet.Weight8_4),
+        new(Sheet.PalletNum9, Sheet.Position9, Sheet.Width9, Sheet.CoreProtection9, Sheet.GrossWeight9, Sheet.Weight9_1, Sheet.Weight9_2, Sheet.Weight9_3, Sheet.Weight9_4),
+        new(Sheet.PalletNum10, Sheet.Position10, Sheet.Width10, Sheet.CoreProtection10, Sheet.GrossWeight10, Sheet.Weight10_1, Sheet.Weight10_2, Sheet.Weight10_3, Sheet.Weight10_4),
+        new(Sheet.PalletNum11, Sheet.Position11, Sheet.Width11, Sheet.CoreProtection11, Sheet.GrossWeight11, Sheet.Weight11_1, Sheet.Weight11_2, Sheet.Weight11_3, Sheet.Weight11_4),
+    }.Where(p => !string.IsNullOrWhiteSpace(p.PalletNum) || !string.IsNullOrWhiteSpace(p.Position) || !string.IsNullOrWhiteSpace(p.Width)
+              || !string.IsNullOrWhiteSpace(p.CoreProtection) || !string.IsNullOrWhiteSpace(p.GrossWeight)
+              || !string.IsNullOrWhiteSpace(p.W1) || !string.IsNullOrWhiteSpace(p.W2) || !string.IsNullOrWhiteSpace(p.W3) || !string.IsNullOrWhiteSpace(p.W4))
+        .ToList();
+}

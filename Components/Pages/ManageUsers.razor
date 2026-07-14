@@ -1,0 +1,141 @@
+@page "/manage-users"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Master")]
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject UserService UserService
+@inject CurrentUserService CurrentUserService
+
+<PageTitle>Manage Users</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Manage Users</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+
+    <div style="padding: 16px 20px;">
+        <p style="margin-bottom: 14px; color: #446688; font-size: 12px;">
+            Users who can log in and create logs. Master users can view and edit every saved log
+            (and manage this list); everyone else can only edit logs they created.
+        </p>
+
+        <div class="table-scroll-wrapper">
+            <table class="sheet-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Master</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in users)
+                    {
+                        <tr class="data-row">
+                            <td>@user.Name</td>
+                            <td class="text-center">
+                                <input type="checkbox" checked="@user.IsMaster"
+                                       @onchange="e => ToggleMaster(user, (bool)e.Value!)" style="transform: scale(1.2); cursor: pointer;" />
+                            </td>
+                            <td class="text-center">
+                                <button class="btn-danger" @onclick="() => RequestDelete(user)">Remove</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="field-group" style="margin-top: 18px;">
+            <div class="field-group-label">Add User</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Name</div>
+                            <input type="text" @bind="newName" class="f-input" placeholder="Full name" />
+                        </div>
+                    </td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" @bind="newIsMaster" />
+                                <span class="f-label" style="margin-bottom: 0;">Master</span>
+                            </label>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="row-controls" style="margin-top: 10px;">
+            <button class="btn-add" @onclick="AddUser" disabled="@(string.IsNullOrWhiteSpace(newName))">+ Add User</button>
+            <span>@statusMessage</span>
+        </div>
+    </div>
+</div>
+
+@if (pendingDelete is not null)
+{
+    <div class="copy-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h4>Remove User</h4>
+            </div>
+            <div class="delete-dialog-body">
+                <p>Remove <strong>@pendingDelete.Name</strong>? Logs they created will remain, editable only by master users.</p>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="btn-secondary" @onclick="() => pendingDelete = null">Cancel</button>
+                <button class="btn-danger" @onclick="ConfirmDelete">Yes, Remove</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserService.UserRecord> users = new();
+    private string newName = "";
+    private bool newIsMaster = false;
+    private string statusMessage = "";
+    private UserService.UserRecord? pendingDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUserService.EnsureInitializedAsync();
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        users = await UserService.GetAllUsersAsync();
+    }
+
+    private async Task AddUser()
+    {
+        if (string.IsNullOrWhiteSpace(newName)) return;
+
+        await UserService.AddUserAsync(newName.Trim(), newIsMaster);
+        newName = "";
+        newIsMaster = false;
+        statusMessage = "User added.";
+        await Refresh();
+    }
+
+    private async Task ToggleMaster(UserService.UserRecord user, bool isMaster)
+    {
+        await UserService.SetMasterAsync(user.Id, isMaster);
+        await Refresh();
+    }
+
+    private void RequestDelete(UserService.UserRecord user) => pendingDelete = user;
+
+    private async Task ConfirmDelete()
+    {
+        if (pendingDelete is null) return;
+
+        await UserService.DeleteUserAsync(pendingDelete.Id);
+        pendingDelete = null;
+        await Refresh();
+    }
+
+    private void GoHome() => Nav.NavigateTo("/");
+}

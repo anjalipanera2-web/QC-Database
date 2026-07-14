@@ -1,0 +1,846 @@
+@page "/operator-self-inspection"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@implements IDisposable
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject IJSRuntime JS
+@inject OperatorAuditService OperatorAuditService
+@inject EditRequestService EditRequestService
+@inject AutosaveSettingsService AutosaveSettingsService
+@inject CurrentUserService CurrentUserService
+
+<PageTitle>Operator Self Inspection Log</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Operator Self Inspection Log</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+    <button class="btn-flag @(!string.IsNullOrWhiteSpace(Sheet.FlagComment) ? "flagged" : "")" @onclick="() => showFlagDialog = true">
+        🚩 @(!string.IsNullOrWhiteSpace(Sheet.FlagComment) ? "Flagged" : "Flag")
+    </button>
+
+    <!--Header field tiles-->
+    <div class="screen-only" style="padding: 10px 10px 2px;">
+        <div class="field-group">
+            <div class="field-group-label">Sheet Info</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Date</div><input type="date" @bind="Sheet.Date" @bind:format="yyyy-MM-dd" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Operator Full Name</div><input type="text" @bind="Sheet.OperatorName" placeholder="Operator name" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Formula Code</div><input type="text" @bind="Sheet.FormulaCode" placeholder="Formula Code" class="f-input" /></div></td>
+                    <td class="band-1"><div class="f-tile"><div class="f-label">Line</div><input type="text" @bind="Sheet.LineNumber" class="f-input" /></div></td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Shift</div>
+                            <select @bind="Sheet.Shift" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="Day">Day</option>
+                                <option value="Night">Night</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-1">
+                        <div class="f-tile">
+                            <div class="f-label">Crew</div>
+                            <select @bind="Sheet.Crew" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Order 1</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Order &amp; Item</div><input type="text" @bind="Sheet.OrderItem1" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Product Type</div><input type="text" @bind="Sheet.ProductType1" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Width</div><input type="text" @bind="Sheet.Width1" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Footage</div><input type="text" @bind="Sheet.Footage1" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Weight Spec Range</div><input type="text" @bind="Sheet.WeightSpec1" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Order 2</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Order &amp; Item</div><input type="text" @bind="Sheet.OrderItem2" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Product Type</div><input type="text" @bind="Sheet.ProductType2" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Width</div><input type="text" @bind="Sheet.Width2" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Footage</div><input type="text" @bind="Sheet.Footage2" class="f-input" /></div></td>
+                    <td class="band-2"><div class="f-tile"><div class="f-label">Weight Spec Range</div><input type="text" @bind="Sheet.WeightSpec2" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="field-group">
+            <div class="field-group-label">Charting Instructions</div>
+            <table class="field-table">
+                <tr>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Box #</div><input type="text" @bind="Sheet.BoxNumber" class="f-input" /></div></td>
+                    <td class="band-3">
+                        <div class="f-tile">
+                            <div class="f-label">Type</div>
+                            <select @bind="Sheet.PalletType" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="HTT">HTT</option>
+                                <option value="Regular Pallet">Regular Pallet</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-3">
+                        <div class="f-tile">
+                            <div class="f-label">Unit</div>
+                            <select @bind="Sheet.Unit" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="Metric">Metric</option>
+                                <option value="Standard">Standard</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Ex. Pallet Ticket</div><input type="text" @bind="Sheet.PalletTicket" class="f-input" /></div></td>
+                </tr>
+                <tr>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Pallet Size</div><input type="text" @bind="Sheet.PalletSize" class="f-input" /></div></td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Layers/# Rolls or Cases</div><input type="text" @bind="Sheet.Layers" class="f-input" /></div></td>
+                    <td class="band-3">
+                        <div class="f-tile">
+                            <div class="f-label">Product</div>
+                            <select @bind="Sheet.Product" class="f-input">
+                                <option value="">-- Select --</option>
+                                <option value="AmTopp">AmTopp</option>
+                                <option value="Generic">Generic</option>
+                                <option value="Barcode">Barcode</option>
+                                <option value="SPEC">SPEC</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="band-3"><div class="f-tile"><div class="f-label">Box Label</div><input type="text" @bind="Sheet.BoxLabel" class="f-input" /></div></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="table-scroll-wrapper screen-only">
+        <table class="sheet-table">
+            <!--Column labels-->
+            <thead>
+                <tr class="header-row-8">
+                    <th rowspan="3">Select</th>
+                    <th rowspan="3">Time</th>
+                    <th colspan="5">Line Conditions</th>
+                    <th colspan="2">Pallet</th>
+                    <th rowspan="3">Crush Core #</th>
+                    <th rowspan="3">Pos.</th>
+                    <th rowspan="3">Width</th>
+                    <th rowspan="3">Weight</th>
+                    <th rowspan="3">Core Prot.</th>
+                    <th rowspan="3">Film &amp; Reel Visuals</th>
+                    <th rowspan="3">Stretch %</th>
+                    <th rowspan="3">Unwind</th>
+                    <th rowspan="3">Stretch Force</th>
+                    <th rowspan="3">Hand Cling</th>
+                    <th rowspan="3">Puncture</th>
+                    <th rowspan="3">Haze/LT. Transmitance</th>
+                    <th rowspan="3">Gels</th>
+                    <th rowspan="3">Pallet Wrap (PW-P/F; Tail-G/O/OW/W/N)</th>
+                    <th rowspan="3">Grade</th>
+                </tr>
+                <tr class="header-row-9">
+                    <th rowspan="2">Line Speed</th>
+                    <th colspan="2">Vacuum</th>
+                    <th colspan="2">Chiller</th>
+                    <th rowspan="2">Barcode</th>
+                    <th rowspan="2">#</th>
+                </tr>
+                <tr class="header-row-10">
+                    <th>1</th>
+                    <th>2</th>
+                    <th>1</th>
+                    <th>2</th>
+                </tr>
+            </thead>
+            <!--Iterative Row Inputs-->
+            <tbody>
+                @foreach (var row in DataRows)
+                {
+                    @RenderDataRow(row)
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!--Print-only: original dense form layout-->
+    <div class="table-scroll-wrapper print-header">
+        <table class="sheet-table">
+            <thead>
+                <tr class="header-row-1">
+                    <th rowspan="4" class="text-center" style="vertical-align: middle; width: 40px;">Select</th>
+                    <th colspan="1">Date</th>
+                    <th colspan="1">Operator Full Name</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.OperatorName" placeholder="Operator name" class="cell-input wide-input" /></td>
+                    <th colspan="2">Shift</th>
+                    <th colspan="2">Crew</th>
+                    <th colspan="3">Order &amp; Item </th>
+                    <th colspan="3">Product Type</th>
+                    <th colspan="3">Width</th>
+                    <th colspan="3">Footage</th>
+                    <th colspan="3">Weight Spec Range</th>
+                </tr>
+                <tr class="header-row-2">
+                    <td rowspan="2"><input type="date" @bind="Sheet.Date" class="cell-input wide-input" /></td>
+                    <th colspan="1">Formula Code</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.FormulaCode" placeholder="Formula Code" class="cell-input wide-input" /></td>
+                    <td rowspan="2" colspan="2">
+                        <select @bind="Sheet.Shift" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="Day">Day</option>
+                            <option value="Night">Night</option>
+                        </select>
+                    </td>
+                    <td colspan="2" rowspan="2">
+                        <select @bind="Sheet.Crew" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </td>
+                    <th>1)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.OrderItem1" class="cell-input wide-input" /></td>
+                    <th>1)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.ProductType1" class="cell-input wide-input" /></td>
+                    <th>1)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.Width1" class="cell-input wide-input" /></td>
+                    <th>1)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.Footage1" class="cell-input wide-input" /></td>
+                    <th>1)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.WeightSpec1" class="cell-input wide-input" /></td>
+                </tr>
+                <tr class="header-row-3">
+                    <th colspan="1">Line</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.LineNumber" class="cell-input wide-input" /></td>
+                    <th>2)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.OrderItem2" class="cell-input wide-input" /></td>
+                    <th>2)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.ProductType2" class="cell-input wide-input" /></td>
+                    <th>2)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.Width2" class="cell-input wide-input" /></td>
+                    <th>2)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.Footage2" class="cell-input wide-input" /></td>
+                    <th>2)</th>
+                    <td colspan="2"><input type="text" @bind="Sheet.WeightSpec2" class="cell-input wide-input" /></td>
+                </tr>
+                <tr class="header-row-4">
+                    <td colspan="2"></td>
+                    <th colspan="12">Charting Instructions Checklist</th>
+                    <th colspan="9">Product Specification Range</th>
+                </tr>
+                <tr class="header-row-5">
+                    <th rowspan="4" colspan="1" style="background-color: #f8f9fa;"></th>
+                    <th rowspan="4" colspan="1">Time</th>
+                    <th colspan="5" rowspan="2">Line Conditions</th>
+                    <th>Box #</th>
+                    <td><input type="text" @bind="Sheet.BoxNumber" class="cell-input wide-input" /></td>
+                    <th>Type</th>
+                    <td>
+                        <select @bind="Sheet.PalletType" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="HTT">HTT</option>
+                            <option value="Regular Pallet">Regular Pallet</option>
+                        </select>
+                    </td>
+                    <th>Unit</th>
+                    <td>
+                        <select @bind="Sheet.Unit" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="Metric">Metric</option>
+                            <option value="Standard">Standard</option>
+                        </select>
+                    </td>
+                    <th>Ex. Pallet Ticket:</th>
+                    <td colspan="1"><input type="text" @bind="Sheet.PalletTicket" class="cell-input wide-input" /></td>
+                    <th rowspan="4" colspan="1">Stretch %</th>
+                    <th rowspan="4" colspan="1">Unwind</th>
+                    <th rowspan="4" colspan="1">Stretch Force</th>
+                    <th rowspan="4" colspan="1">Hand Cling</th>
+                    <th rowspan="4" colspan="1">Puncture</th>
+                    <th rowspan="4" colspan="1">Haze/LT. Transmitance</th>
+                    <th rowspan="4" colspan="1">Gels</th>
+                    <th rowspan="4" colspan="1">Pallet Wrap (PW-P/F; Tail-G/O/OW/W/N</th>
+                    <th rowspan="4" colspan="1">Grade</th>
+                </tr>
+                <tr class="header-row-6">
+                    <th>Pallet Size:</th>
+                    <td><input type="text" @bind="Sheet.PalletSize" class="cell-input wide-input" /></td>
+                    <th>Layers/# rolls or cases</th>
+                    <td><input type="text" @bind="Sheet.Layers" class="cell-input wide-input" /></td>
+                    <th>Product:</th>
+                    <td>
+                        <select @bind="Sheet.Product" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="AmTopp">AmTopp</option>
+                            <option value="Generic">Generic</option>
+                            <option value="Barcode">Barcode</option>
+                            <option value="SPEC">SPEC</option>
+                        </select>
+                    </td>
+                    <th>Box Label:</th>
+                    <td><input type="text" @bind="Sheet.BoxLabel" class="cell-input wide-input" /></td>
+                </tr>
+                <tr class="header-row-7">
+                    <th rowspan="2">Line Speed</th>
+                    <th colspan="2">Vacuum</th>
+                    <th colspan="2">Chiller</th>
+                    <th colspan="2">Pallet</th>
+                    <th rowspan="2">Crush Core #</th>
+                    <th rowspan="2">Pos.</th>
+                    <th rowspan="2">Width</th>
+                    <th rowspan="2">Weight</th>
+                    <th rowspan="2">Core Prot.</th>
+                    <th rowspan="2">Film &amp; Reel Visuals</th>
+                </tr>
+                <tr class="header-row-8">
+                    <th>1</th>
+                    <th>2</th>
+                    <th>1</th>
+                    <th>2</th>
+                    <th>Barcode</th>
+                    <th>#</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in DataRows)
+                {
+                    @RenderDataRow(row)
+                }
+            </tbody>
+        </table>
+    </div>
+    <!--Control Buttons-->
+    <div class="row-controls">
+        <button class="btn-add" @onclick="AddEmptyRow">+ Add Row</button>
+        <button class="btn-add" @onclick="OpenCopyDialog" disabled="@(!DataRows.Any())">+ Add Row (Copy Last)</button>
+        <button class="btn-remove" @onclick="RequestRemoveRows" disabled="@(!DataRows.Any(r => r.IsSelected))">− Remove Row</button>
+        <span class="row-count">@DataRows.Count row@(DataRows.Count == 1 ? "" : "s") (@DataRows.Count(r => r.IsSelected) selected)</span>
+        <button class="btn-add" @onclick="SaveToDatabase">Save</button>
+        <span>@saveMessage</span>
+        <span class="autosave-status">@autoSaveStatus</span>
+        <div class="export-controls">
+            <button class="btn-export-excel" @onclick="ExportToExcel">↓ Export Excel</button>
+            <button class="btn-export-pdf" @onclick="ExportToPdf">↓ Export PDF</button>
+        </div>
+    </div>
+    <!--Copy Row Dialog-->
+    @if (showCopyOptions)
+    {
+        <div class="copy-overlay">
+            <div class="copy-dialog">
+                <div class="copy-dialog-header">
+                    <h4>Copy from Last Row</h4>
+                    <button class="copy-dialog-close" @onclick="() => showCopyOptions = false">✕</button>
+                </div>
+                <div class="copy-dialog-body">
+                    <div class="copy-select-bar">
+                        <button class="btn-select-toggle" @onclick="SelectAllColumns">Select All</button>
+                        <button class="btn-select-toggle" @onclick="DeselectAllColumns">Deselect All</button>
+                        <span class="copy-count">@copyableColumns.Count(c => c.Include) of @copyableColumns.Count selected</span>
+                    </div>
+                    <div class="copy-options">
+                        @foreach (var col in copyableColumns)
+                        {
+                            <label>
+                                <input type="checkbox" checked="@col.Include"
+                                       @onchange="e => col.Include = (bool)e.Value" />
+                                @col.Name
+                            </label>
+                        }
+                    </div>
+                </div>
+                <div class="copy-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showCopyOptions = false">Cancel</button>
+                    <button class="btn-add" @onclick="ConfirmCopyRow">Copy Row</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Delete Confirmation Dialog-->
+    @if (showDeleteConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Confirm Deletion</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>Are you sure you want to delete the <strong>@DataRows.Count(r => r.IsSelected)</strong> selected row(s)?</p>
+                    <p class="delete-warning">This action cannot be undone.</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showDeleteConfirmation = false">Cancel</button>
+                    <button class="btn-danger" @onclick="ConfirmRemoveRows">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Flag Comment Dialog-->
+    @if (showFlagDialog)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Flag This Sheet</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <textarea class="cell-input wide-input" rows="4" style="border: 1px solid #c5d8ee; border-radius: 3px;"
+                              placeholder="Describe the issue..." @bind="Sheet.FlagComment"></textarea>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showFlagDialog = false">Cancel</button>
+                    <button class="btn-danger" @onclick="ClearFlag">Clear Flag</button>
+                    <button class="btn-add" @onclick="() => showFlagDialog = false">Done</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Save to Database Confirmation-->
+    @if (showSaveConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Confirm Save</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>Are you sure you want to save this log to the database?</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showSaveConfirmation = false">Cancel</button>
+                    <button class="btn-add" @onclick="ConfirmSave">Yes, Save</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Unsaved Changes Confirmation (Back button)-->
+    @if (showLeaveConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Unsaved Changes</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>You have unsaved changes on this sheet. Save before leaving?</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showLeaveConfirmation = false">Cancel</button>
+                    <button class="btn-danger" @onclick="LeaveWithoutSaving">Discard &amp; Leave</button>
+                    <button class="btn-add" @onclick="LeaveWithSaving">Save &amp; Leave</button>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    <!--Shared row rendering (used by both the on-screen and print-only tables)-->
+    private RenderFragment RenderDataRow(SheetRow row) => @<tr class="data-row">
+        <td class="text-center" style="vertical-align: middle; background-color: #f8f9fa;">
+            <input type="checkbox" @bind="row.IsSelected" style="transform: scale(1.2); cursor: pointer;" />
+        </td>
+        <td><TimeSelector @bind-Value="row.Time" FifteenMinuteInterval="true"/></td>
+        <td><input type="text" @bind="row.LineSpeed" placeholder="Line Speed" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Vacuum1" placeholder="Vacuum 1" class="cell-input" /></td>
+        <td><input type="text" @bind="row.Vacuum2" placeholder="Vacuum 2" class="cell-input" /></td>
+        <td><input type="text" @bind="row.TChiller1" placeholder="Chiller 1" class="cell-input" /></td>
+        <td><input type="text" @bind="row.TChiller2" placeholder="Chiller 2" class="cell-input" /></td>
+        <td><input type="text" @bind="row.PalletBarcode" placeholder="Pallet Barcode" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.PalletNum" placeholder="Pallet Number" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.CrushCore" placeholder="Crush Core #" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Pos" placeholder="Pos." class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Width" placeholder="Width" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Weight" placeholder="Weight" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.CoreProt" placeholder="Core Prot." class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.FilmRV" placeholder="Film & Reel Visuals" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.StretchP" placeholder="Stretch %" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Unwind" placeholder="Unwind" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.StretchF" placeholder="Stretch Force" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.HandCling" placeholder="Hand Cling" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Puncture" placeholder="Puncture" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.LtTransm" placeholder="Haze/LT. Transmitance" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Gels" placeholder="Gels" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.PalletWrap" placeholder="Pallet Wrap (PW-P/F; Tail-G/O/OW/W/N)" class="cell-input wide-input" /></td>
+        <td><input type="text" @bind="row.Grade" placeholder="Grade" class="cell-input wide-input" /></td>
+    </tr>;
+
+    <!--Booleans-->
+    private bool showCopyOptions = false;
+    private bool showDeleteConfirmation = false;
+
+    <!--Copy Column Code-->
+    private class CopyColumn
+    {
+        public string Name { get; set; }
+        public bool Include { get; set; } = true;
+        public CopyColumn(string name) => Name = name;
+    }
+
+    private List<CopyColumn> copyableColumns = new()
+    {
+        new CopyColumn("Time"),
+        new CopyColumn("Line Speed"),
+        new CopyColumn("Vacuum 1"),
+        new CopyColumn("Vacuum 2"),
+        new CopyColumn("Chiller 1"),
+        new CopyColumn("Chiller 2"),
+        new CopyColumn("Pallet Barcode"),
+        new CopyColumn("Pallet Number"),
+        new CopyColumn("Crush Core #"),
+        new CopyColumn("Pos."),
+        new CopyColumn("Width"),
+        new CopyColumn("Weight"),
+        new CopyColumn("Core Prot."),
+        new CopyColumn("Film & Reel Visuals"),
+        new CopyColumn("Stretch %"),
+        new CopyColumn("Unwind"),
+        new CopyColumn("Stretch Force"),
+        new CopyColumn("Hand Cling"),
+        new CopyColumn("Puncture"),
+        new CopyColumn("Haze/LT. Transmitance"),
+        new CopyColumn("Gels"),
+        new CopyColumn("Pallet Wrap"),
+        new CopyColumn("Grade")
+    };
+
+    private void OpenCopyDialog()
+    {
+        if (DataRows.Any())
+            showCopyOptions = true;
+        else
+            AddEmptyRow();
+    }
+    private void ConfirmCopyRow()
+    {
+        var last = DataRows.Last();
+        var newRow = new SheetRow();
+
+        if (IsIncluded("Time")) newRow.Time = last.Time;
+        if (IsIncluded("Line Speed")) newRow.LineSpeed = last.LineSpeed;
+        if (IsIncluded("Vacuum 1")) newRow.Vacuum1 = last.Vacuum1;
+        if (IsIncluded("Vacuum 2")) newRow.Vacuum2 = last.Vacuum2;
+        if (IsIncluded("Chiller 1")) newRow.TChiller1 = last.TChiller1;
+        if (IsIncluded("Chiller 2")) newRow.TChiller2 = last.TChiller2;
+        if (IsIncluded("Pallet Barcode")) newRow.PalletBarcode = last.PalletBarcode;
+        if (IsIncluded("Pallet Number")) newRow.PalletNum = last.PalletNum;
+        if (IsIncluded("Crush Core #")) newRow.CrushCore = last.CrushCore;
+        if (IsIncluded("Pos.")) newRow.Pos = last.Pos;
+        if (IsIncluded("Width")) newRow.Width = last.Width;
+        if (IsIncluded("Weight")) newRow.Weight = last.Weight;
+        if (IsIncluded("Core Prot.")) newRow.CoreProt = last.CoreProt;
+        if (IsIncluded("Film & Reel Visuals")) newRow.FilmRV = last.FilmRV;
+        if (IsIncluded("Stretch %")) newRow.StretchP = last.StretchP;
+        if (IsIncluded("Unwind")) newRow.Unwind = last.Unwind;
+        if (IsIncluded("Stretch Force")) newRow.StretchF = last.StretchF;
+        if (IsIncluded("Hand Cling")) newRow.HandCling = last.HandCling;
+        if (IsIncluded("Puncture")) newRow.Puncture = last.Puncture;
+        if (IsIncluded("Haze/LT. Transmitance")) newRow.LtTransm = last.LtTransm;
+        if (IsIncluded("Gels")) newRow.Gels = last.Gels;
+        if (IsIncluded("Pallet Wrap")) newRow.PalletWrap = last.PalletWrap;
+        if (IsIncluded("Grade")) newRow.Grade = last.Grade;
+
+        DataRows.Add(newRow);
+        showCopyOptions = false;
+    }
+
+    private bool IsIncluded(string name) =>
+        copyableColumns.First(c => c.Name == name).Include;
+
+    private void SelectAllColumns() => copyableColumns.ForEach(c => c.Include = true);
+    private void DeselectAllColumns() => copyableColumns.ForEach(c => c.Include = false);
+
+    private string saveMessage = "";
+
+    private bool showSaveConfirmation = false;
+    private bool showFlagDialog = false;
+
+    private void ClearFlag()
+    {
+        Sheet.FlagComment = "";
+        showFlagDialog = false;
+    }
+
+    private void SaveToDatabase()
+    {
+        showSaveConfirmation = true;
+    }
+
+    private async Task ConfirmSave()
+    {
+        try
+        {
+            await PersistAsync();
+            saveMessage = "Saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error: {ex.Message}";
+        }
+        showSaveConfirmation = false;
+    }
+
+    <!--Autosave / unsaved-changes tracking-->
+    private int? savedId;
+    private string lastSavedSnapshot = "";
+    private string autoSaveStatus = "";
+    private bool showLeaveConfirmation = false;
+    private System.Threading.Timer? autoSaveTimer;
+
+    private string Snapshot() => System.Text.Json.JsonSerializer.Serialize(new { Sheet, DataRows });
+
+    private async Task PersistAsync()
+    {
+        if (savedId is int id)
+        {
+            await OperatorAuditService.UpdateSheetAsync(id, Sheet, DataRows);
+        }
+        else
+        {
+            savedId = await OperatorAuditService.SaveSheetAsync(Sheet, DataRows, CurrentUserService.UserId);
+        }
+        lastSavedSnapshot = Snapshot();
+    }
+
+    private async Task AutoSaveTick()
+    {
+        if (Snapshot() == lastSavedSnapshot) return;
+
+        try
+        {
+            await PersistAsync();
+            autoSaveStatus = $"Autosaved at {DateTime.Now:h:mm:ss tt}";
+        }
+        catch (Exception ex)
+        {
+            autoSaveStatus = $"Autosave failed: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private void GoHome()
+    {
+        if (Snapshot() != lastSavedSnapshot)
+        {
+            showLeaveConfirmation = true;
+        }
+        else
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private async Task LeaveWithSaving()
+    {
+        await ConfirmSave();
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private void LeaveWithoutSaving()
+    {
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private string autosaveMode = "Interval";
+
+    <!--Add/Remove Rows-->
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUserService.EnsureInitializedAsync();
+
+        var editRequest = EditRequestService.Consume("Operator");
+        if (editRequest is not null)
+        {
+            var (id, payload) = editRequest.Value;
+            var (header, rows) = ((SheetHeader, List<SheetRow>))payload;
+            Sheet = header;
+            DataRows.Clear();
+            DataRows.AddRange(rows);
+            savedId = id;
+        }
+        else
+        {
+            DataRows.Add(new SheetRow());
+            if (string.IsNullOrWhiteSpace(Sheet.OperatorName))
+            {
+                Sheet.OperatorName = CurrentUserService.UserName;
+            }
+        }
+
+        lastSavedSnapshot = Snapshot();
+
+        var settings = await AutosaveSettingsService.GetSettingsAsync();
+        autosaveMode = settings.Mode;
+        if (autosaveMode == "Interval")
+        {
+            autoSaveTimer = new System.Threading.Timer(
+                _ => InvokeAsync(AutoSaveTick),
+                null,
+                TimeSpan.FromSeconds(settings.IntervalSeconds),
+                TimeSpan.FromSeconds(settings.IntervalSeconds));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && autosaveMode == "OnChange")
+        {
+            await AutoSaveTick();
+        }
+    }
+
+    public void Dispose()
+    {
+        autoSaveTimer?.Dispose();
+    }
+
+    private void AddEmptyRow()
+    {
+        DataRows.Add(new SheetRow());
+    }
+
+
+    private void RequestRemoveRows()
+    {
+        if (DataRows.Any(r => r.IsSelected))
+        {
+            showDeleteConfirmation = true;
+        }
+    }
+
+    private void ConfirmRemoveRows()
+    {
+        DataRows.RemoveAll(r => r.IsSelected);
+        showDeleteConfirmation = false;
+
+        // Ensure at least one empty row remains accessible if all data row tracking elements are cleared
+        if (!DataRows.Any())
+        {
+            AddEmptyRow();
+        }
+    }
+
+    <!--Export Buttons-->
+    private async Task ExportToExcel()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Operator Self Inspection Log");
+        sb.AppendLine($"Date,{Esc(Sheet.Date.ToString("yyyy-MM-dd"))},Operator,{Esc(Sheet.OperatorName)},Shift,{Esc(Sheet.Shift)},Crew,{Esc(Sheet.Crew)}");
+        sb.AppendLine($"Formula Code,{Esc(Sheet.FormulaCode)},Line,{Esc(Sheet.LineNumber)}");
+        sb.AppendLine($"Order/Item 1,{Esc(Sheet.OrderItem1)},Product Type 1,{Esc(Sheet.ProductType1)},Width 1,{Esc(Sheet.Width1)},Footage 1,{Esc(Sheet.Footage1)},Weight Spec 1,{Esc(Sheet.WeightSpec1)}");
+        sb.AppendLine($"Order/Item 2,{Esc(Sheet.OrderItem2)},Product Type 2,{Esc(Sheet.ProductType2)},Width 2,{Esc(Sheet.Width2)},Footage 2,{Esc(Sheet.Footage2)},Weight Spec 2,{Esc(Sheet.WeightSpec2)}");
+        sb.AppendLine();
+        sb.AppendLine("Time,Line Speed,Vacuum 1,Vacuum 2,Chiller 1,Chiller 2,Pallet Barcode,Pallet #,Crush Core #,Pos.,Width,Weight,Core Prot.,Film & Reel Visuals,Stretch %,Unwind,Stretch Force,Hand Cling,Puncture,Haze/LT. Trans.,Gels,Pallet Wrap,Grade");
+        foreach (var row in DataRows)
+        {
+            sb.AppendLine(string.Join(",",
+                Esc(row.Time == TimeOnly.MinValue ? "" : row.Time.ToString("HH:mm")),
+                Esc(row.LineSpeed), Esc(row.Vacuum1), Esc(row.Vacuum2),
+                Esc(row.TChiller1), Esc(row.TChiller2), Esc(row.PalletBarcode),
+                Esc(row.PalletNum), Esc(row.CrushCore), Esc(row.Pos),
+                Esc(row.Width), Esc(row.Weight), Esc(row.CoreProt),
+                Esc(row.FilmRV), Esc(row.StretchP), Esc(row.Unwind),
+                Esc(row.StretchF), Esc(row.HandCling), Esc(row.Puncture),
+                Esc(row.LtTransm), Esc(row.Gels), Esc(row.PalletWrap),
+                Esc(row.Grade)));
+        }
+        await JS.InvokeVoidAsync("downloadFile", "OperatorSelfInspection.csv", sb.ToString(), "text/csv;charset=utf-8;");
+    }
+
+    private async Task ExportToPdf()
+    {
+        await JS.InvokeVoidAsync("printPage");
+    }
+
+    private static string Esc(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        return s;
+    }
+
+    <!--Input Variables-->
+    private SheetHeader Sheet = new();
+    private List<SheetRow> DataRows = new();
+
+    // Header Variables
+    public class SheetHeader
+    {
+        public string FlagComment { get; set; } = "";
+        public int? CreatedByUserId { get; set; }
+        public string? CreatedByName { get; set; }
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string OperatorName { get; set; } = "";
+        public string FormulaCode { get; set; } = "";
+        public string LineNumber { get; set; } = "";
+        public string Shift { get; set; } = "";
+        public string Crew { get; set; } = "";
+        public string OrderItem1 { get; set; } = "";
+        public string OrderItem2 { get; set; } = "";
+        public string ProductType1 { get; set; } = "";
+        public string ProductType2 { get; set; } = "";
+        public string Width1 { get; set; } = "";
+        public string Width2 { get; set; } = "";
+        public string Footage1 { get; set; } = "";
+        public string Footage2 { get; set; } = "";
+        public string WeightSpec1 { get; set; } = "";
+        public string WeightSpec2 { get; set; } = "";
+        public string BoxNumber { get; set; } = "";
+        public string PalletType { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public string PalletTicket { get; set; } = "";
+        public string PalletSize { get; set; } = "";
+        public string Layers { get; set; } = "";
+        public string Product { get; set; } = "";
+        public string BoxLabel { get; set; } = "";
+    }
+
+    // Measurement Variables
+    public class SheetRow
+    {
+        public bool IsSelected { get; set; } = false; // Tracks custom row selection deletions
+        public TimeOnly Time { get; set; } = TimeOnly.MinValue;
+        public string LineSpeed { get; set; } = "";
+        public string Vacuum1 { get; set; } = "";
+        public string Vacuum2 { get; set; } = "";
+        public string TChiller1 { get; set; } = "";
+        public string TChiller2 { get; set; } = "";
+        public string PalletBarcode { get; set; } = "";
+        public string PalletNum { get; set; } = "";
+        public string CrushCore { get; set; } = "";
+        public string Pos { get; set; } = "";
+        public string Width { get; set; } = "";
+        public string Weight { get; set; } = "";
+        public string CoreProt { get; set; } = "";
+        public string FilmRV { get; set; } = "";
+        public string StretchP { get; set; } = "";
+        public string Unwind { get; set; } = "";
+        public string StretchF { get; set; } = "";
+        public string HandCling { get; set; } = "";
+        public string Puncture { get; set; } = "";
+        public string LtTransm { get; set; } = "";
+        public string Gels { get; set; } = "";
+        public string PalletWrap { get; set; } = "";
+        public string Grade { get; set; } = "";
+    }
+}

@@ -1,0 +1,927 @@
+@page "/stretch-film-test-result-log"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@implements IDisposable
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject IJSRuntime JS
+@inject QCTestLogService QCTestLogService
+@inject SpecOptionsService SpecOptionsService
+@inject SpecRuleService SpecRuleService
+@inject EditRequestService EditRequestService
+@inject AutosaveSettingsService AutosaveSettingsService
+@inject CurrentUserService CurrentUserService
+
+<PageTitle>Stretch Film Test Result Log</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Stretch Film Test Result Log</div>
+    <!--Back Button-->
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+    <button class="btn-flag @(!string.IsNullOrWhiteSpace(Sheet.FlagComment) ? "flagged" : "")" @onclick="() => showFlagDialog = true">
+        🚩 @(!string.IsNullOrWhiteSpace(Sheet.FlagComment) ? "Flagged" : "Flag")
+    </button>
+
+    <!--Header field tiles-->
+    <div class="screen-only" style="padding: 10px 10px 2px;">
+        <table class="field-table">
+            <tr>
+                <td class="band-1" style="width:15%;">
+                    <div class="f-tile">
+                        <div class="f-label">Date</div>
+                        <input type="date" @bind="Sheet.Date" @bind:format="yyyy-MM-dd" class="f-input" />
+                    </div>
+                </td>
+                <td class="band-1" colspan="2" style="width:26%;">
+                    <div class="f-tile">
+                        <div class="f-label">QC Tech</div>
+                        <input type="text" @bind="Sheet.QCTech" class="f-input" />
+                    </div>
+                </td>
+                <td class="band-1" colspan="3">
+                    <div class="f-tile">
+                        <div class="f-label">Film Type</div>
+                        <select @bind="Sheet.FilmType" @bind:after="RefreshRules" class="f-input">
+                            <option value="">-- Select --</option>
+                            @foreach (var ft in filmTypes)
+                            {
+                                <option value="@ft.Name">@ft.Name</option>
+                            }
+                        </select>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="band-2">
+                    <div class="f-tile">
+                        <div class="f-label">Shift</div>
+                        <select @bind="Sheet.Shift" class="f-input">
+                            <option value="">-- Select --</option>
+                            <option value="Day">Day</option>
+                            <option value="Night">Night</option>
+                        </select>
+                    </div>
+                </td>
+                <td class="band-2">
+                    <div class="f-tile">
+                        <div class="f-label">Crew</div>
+                        <select @bind="Sheet.Crew" class="f-input">
+                            <option value="">-- Select --</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </div>
+                </td>
+                <td class="band-2" colspan="4">
+                    <div class="f-tile">
+                        <div class="f-label">Line</div>
+                        <input type="text" @bind="Sheet.Line" class="f-input" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="band-3">
+                    <div class="f-tile">
+                        <div class="f-label">Gauge</div>
+                        <input type="text" @bind="Sheet.Gauge" class="f-input" />
+                    </div>
+                </td>
+                <td class="band-3" colspan="5">
+                    <div class="f-tile">
+                        <div class="f-label">Formula</div>
+                        <input type="text" @bind="Sheet.Formula" class="f-input" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="band-1" colspan="2">
+                    <div class="f-tile">
+                        <div class="f-label">Roll Weight LSL (Manual)</div>
+                        <input type="text" @bind="Sheet.LSL1" class="f-input" />
+                    </div>
+                </td>
+                <td class="band-1" colspan="2">
+                    <div class="f-tile">
+                        <div class="f-label">Roll Weight Target (Manual)</div>
+                        <input type="text" @bind="Sheet.Target1" class="f-input" />
+                    </div>
+                </td>
+                <td class="band-1" colspan="2">
+                    <div class="f-tile">
+                        <div class="f-label">Roll Weight USL (Manual)</div>
+                        <input type="text" @bind="Sheet.USL1" class="f-input" />
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!--Print-only: original dense form header-->
+    <div class="print-header" style="padding: 10px 10px 2px;">
+        <table class="sheet-table">
+            <tr>
+                <th>Date</th>
+                <td><input type="date" @bind="Sheet.Date" @bind:format="yyyy-MM-dd" class="cell-input wide-input" /></td>
+                <th>QC Tech</th>
+                <td colspan="2"><input type="text" @bind="Sheet.QCTech" class="cell-input wide-input" /></td>
+                <th>Film Type</th>
+                <td colspan="3">
+                    <select @bind="Sheet.FilmType" @bind:after="RefreshRules" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        @foreach (var ft in filmTypes)
+                        {
+                            <option value="@ft.Name">@ft.Name</option>
+                        }
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>Shift</th>
+                <td>
+                    <select @bind="Sheet.Shift" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="Day">Day</option>
+                        <option value="Night">Night</option>
+                    </select>
+                </td>
+                <th>Crew</th>
+                <td>
+                    <select @bind="Sheet.Crew" class="cell-input wide-input">
+                        <option value="">-- Select --</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                    </select>
+                </td>
+                <th>Line</th>
+                <td colspan="4"><input type="text" @bind="Sheet.Line" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>Gauge</th>
+                <td><input type="text" @bind="Sheet.Gauge" class="cell-input wide-input" /></td>
+                <th>Formula</th>
+                <td colspan="5"><input type="text" @bind="Sheet.Formula" class="cell-input wide-input" /></td>
+            </tr>
+            <tr>
+                <th>Roll Weight LSL (Manual)</th>
+                <td><input type="text" @bind="Sheet.LSL1" class="cell-input wide-input" /></td>
+                <th>Roll Weight Target (Manual)</th>
+                <td><input type="text" @bind="Sheet.Target1" class="cell-input wide-input" /></td>
+                <th>Roll Weight USL (Manual)</th>
+                <td><input type="text" @bind="Sheet.USL1" class="cell-input wide-input" /></td>
+            </tr>
+        </table>
+    </div>
+
+    <!--Specification Sets-->
+    <div class="sets-zone">
+        <div class="zone-label">Specification sets — applied by gauge and roll width</div>
+        @if (!MatchingRules.Any())
+        {
+            <p class="history-empty">@GetSetsEmptyMessage()</p>
+        }
+        else
+        {
+            <div class="sets-grid">
+                @foreach (var rule in MatchingRules)
+                {
+                    <div class="set-card">
+                        <div class="set-head">
+                            <span class="set-name">@rule.SetName</span>
+                        </div>
+                        @if (string.IsNullOrWhiteSpace(Sheet.Gauge))
+                        {
+                            <p class="history-empty">Enter Gauge to see the specs that apply.</p>
+                        }
+                        @for (int m = 1; m <= SpecRule.MetricLabels.Length; m++)
+                        {
+                            var brackets = SpecRuleService.FilterRelevant(rule.BracketsFor(m), Sheet.Gauge, DataRows.Select(r => r.RollWidth));
+                            if (brackets.Any())
+                            {
+                                var fc = rule.FieldConfigFor(m);
+                                var gaugeOnly = SpecRule.GaugeOnlyMetricIndexes.Contains(m);
+                                <div class="set-metric">
+                                    <div class="set-metric-name">@SpecRule.MetricLabels[m - 1]</div>
+                                    <div class="set-metric-table-wrapper">
+                                        <table>
+                                            <tr>
+                                                <th class="col-gauge">Gauge</th>
+                                                <th class="col-width">Width</th>
+                                                <th class="col-lsl">LSL</th>
+                                                <th class="col-target">Target</th>
+                                                <th class="col-usl">USL</th>
+                                            </tr>
+                                            @foreach (var b in brackets)
+                                            {
+                                                <tr>
+                                                    <td class="col-gauge">@SpecRuleService.FormatRange(b.GaugeMin, b.GaugeMax)</td>
+                                                    <td class="col-width">@(gaugeOnly ? "—" : SpecRuleService.FormatRange(b.WidthMin, b.WidthMax, " in"))</td>
+                                                    <td class="col-lsl">@(fc.HasLSL ? b.LSL : "—")</td>
+                                                    <td class="col-target">@(fc.HasTarget ? b.Target : "—")</td>
+                                                    <td class="col-usl">@(fc.HasUSL ? b.USL : "—")</td>
+                                                </tr>
+                                            }
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        @{ var notes = GetSpecNotes(rule); }
+                        @if (notes.Any())
+                        {
+                            <div class="set-notes">
+                                @foreach (var note in notes)
+                                {
+                                    <div class="set-note"><strong>@note.Label:</strong> @note.Note</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="table-scroll-wrapper">
+        <table class="sheet-table">
+            <thead>
+                <!--Column labels-->
+                <tr class="header-row-8">
+                    <th rowspan="3">Select</th>
+                    <th rowspan="3">Sample Time</th>
+                    <th rowspan="3">Test Time</th>
+                    <th rowspan="3">Roll Width</th>
+                    <th rowspan="3">Test Roll Width</th>
+                    <th rowspan="3">Pos.</th>
+                    <th rowspan="3">Roll weight</th>
+                    <th rowspan="3">Ultimate Stretch %</th>
+                    <th rowspan="2">Average Stretch %</th>
+                    <th rowspan="3">Unwind</th>
+                    <th rowspan="3">Avg. Cling</th>
+                    <th rowspan="1">Puncture</th>
+                    <th rowspan="2">PW</th>
+                    <th rowspan="3">Avg Thickness</th>
+                    <th rowspan="2">Haze Lt. Trans.</th>
+                    <th rowspan="3">Gel Count</th>
+                    <th rowspan="3">Roll / Film Visuals / Remarks</th>
+                    <th rowspan="3">Roll Status</th>
+                </tr>
+                <tr class="header-row-9"><th>Stdv.</th></tr>
+                <tr class="header-row-10">
+                    <th>Stretch Force</th>
+                    <th># of Punct.</th>
+                    <th>Tail</th>
+                    <th>Stdv.</th>
+                </tr>
+            </thead>
+            <!--Iterative Row Inputs-->
+            @for (int i = 0; i < DataRows.Count; i++)
+            {
+                var row = DataRows[i];
+                var stretchBracket = SpecRuleService.ResolveMetric(MatchingRules, 2, Sheet.Gauge, row.RollWidth);
+                var avgStretchBracket = SpecRuleService.ResolveMetric(MatchingRules, 3, Sheet.Gauge, row.RollWidth);
+                var unwindBracket = SpecRuleService.ResolveMetric(MatchingRules, 4, Sheet.Gauge, row.RollWidth);
+                <tbody>
+                    <tr class="data-row-1">
+                        <td rowspan="4" class="text-center" style="vertical-align: middle; background-color: #f8f9fa;">
+                            <input type="checkbox" @bind="row.IsSelected" style="transform: scale(1.2); cursor: pointer;" />
+                        </td>
+                        <td rowspan="2"><TimeSelector @bind-Value="row.SampleTime" /></td>
+                        <td rowspan="2"><TimeSelector @bind-Value="row.TestTime" /></td>
+                        <td rowspan="2">
+                            <input type="text" @bind="row.RollWidth" placeholder="Roll Width" class="cell-input wide-input" />
+                        </td>
+                        <td rowspan="2"><input type="text" @bind="row.TestRollWidth" placeholder="Test Roll Width" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.Position" placeholder="Position" class="cell-input wide-input" /></td>
+                        <td rowspan="4">
+                            <div class="width-cell">
+                                <input type="text" @bind="row.RollWeight" placeholder="Roll Weight" class="cell-input wide-input" />
+                                @RenderManualSpecTag(row.RollWeight)
+                            </div>
+                        </td>
+                        <td rowspan="4">
+                            <div class="width-cell">
+                                <input type="text" @bind="row.StretchP" placeholder="Ultimate Stretch %" class="cell-input wide-input" />
+                                @RenderMetricTag(stretchBracket)
+                            </div>
+                        </td>
+                        <td rowspan="2">
+                            <div class="width-cell">
+                                <input type="text" @bind="row.AvgStretch" placeholder="Average Stretch %" class="cell-input wide-input" />
+                                @RenderMetricTag(avgStretchBracket)
+                            </div>
+                        </td>
+                        <td rowspan="4">
+                            <div class="width-cell">
+                                <input type="text" @bind="row.Unwind" placeholder="Unwind" class="cell-input wide-input" />
+                                @RenderMetricTag(unwindBracket)
+                            </div>
+                        </td>
+                        <th>Out</th>
+                        <td><input type="text" @bind="row.Puncture" placeholder="Puncture" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.PW" placeholder="PW" class="cell-input wide-input" /></td>
+                        <td rowspan="4">
+                            <div class="width-cell">
+                                <input type="text" @bind="row.ThicknessOuter1" @bind:event="oninput" @bind:after="() => RecomputeAvgThickness(row)" placeholder="Outer" class="cell-input wide-input" />
+                                <input type="text" @bind="row.ThicknessMiddle" @bind:event="oninput" @bind:after="() => RecomputeAvgThickness(row)" placeholder="Middle" class="cell-input wide-input" />
+                                <input type="text" @bind="row.ThicknessOuter2" @bind:event="oninput" @bind:after="() => RecomputeAvgThickness(row)" placeholder="Outer" class="cell-input wide-input" />
+                                <input type="text" readonly value="@row.AvgThickness" placeholder="Avg Thickness" class="cell-input wide-input computed-cell" />
+                            </div>
+                        </td>
+                        <td rowspan="2"><input type="text" @bind="row.LtTransm" placeholder="Haze Lt. Trans." class="cell-input wide-input" /></td>
+                        <td rowspan="4"><textarea @bind="row.GelCount" placeholder="Gel Count" class="cell-input wide-input"></textarea></td>
+                        <td rowspan="4"><textarea @bind="row.Remarks" placeholder="Remarks" class="cell-input wide-input"></textarea></td>
+                        <td rowspan="4">
+                            <select @bind="row.RollStatus" class="cell-input wide-input">
+                                <option value="">-- Select --</option>
+                                <option value="Good">Good</option>
+                                <option value="Hold">Hold</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr class="data-row-2">
+                        <td>
+                            <select @bind="row.OutClingGrade" class="cell-input wide-input">
+                                <option value="">None</option>
+                                <option value="VW">VW</option>
+                                <option value="W">W</option>
+                                <option value="WO">WO</option>
+                                <option value="OK">OK</option>
+                                <option value="OG">OG</option>
+                                <option value="G">G</option>
+                                <option value="VG">VG</option>
+                                <option value="VVG">VVG</option>
+                            </select>
+                        </td>
+                        <td><input type="text" @bind="row.PunStdv" placeholder="Punct. Stdv." class="cell-input wide-input" /></td>
+                    </tr>
+                    <tr class="data-row-3">
+                        <th rowspan="2">Barcode #</th>
+                        <td colspan="3" rowspan="2"><input type="text" @bind="row.Barcode" class="cell-input wide-input" /></td>
+                        <th>Pallet #</th>
+                        <td rowspan="2">
+                            <div class="width-cell">
+                                <input type="text" @bind="row.StretchForce" placeholder="Stretch Force" class="cell-input wide-input" />
+                            </div>
+                        </td>
+                        <th>In</th>
+                        <td rowspan="2"><input type="text" @bind="row.NumPunct" placeholder="# of Punct." class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.Tail" placeholder="Tail" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.HazeStdv" placeholder="Haze Stdv." class="cell-input wide-input" /></td>
+                    </tr>
+                    <tr class="data-row-4">
+                        <td><input type="text" @bind="row.PalletNum" placeholder="Pallet #" class="cell-input wide-input" /></td>
+                        <td>
+                            <select @bind="row.InClingGrade" class="cell-input wide-input">
+                                <option value="">None</option>
+                                <option value="VW">VW</option>
+                                <option value="W">W</option>
+                                <option value="WO">WO</option>
+                                <option value="OK">OK</option>
+                                <option value="OG">OG</option>
+                                <option value="G">G</option>
+                                <option value="VG">VG</option>
+                                <option value="VVG">VVG</option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+            }
+        </table>
+    </div>
+    <!--Buttons-->
+    <div class="row-controls">
+        <button class="btn-add" @onclick="AddEmptyRow">+ Add Row</button>
+        <button class="btn-add" @onclick="OpenCopyDialog" disabled="@(!DataRows.Any())">+ Add Row (Copy Last)</button>
+        <button class="btn-remove" @onclick="RequestRemoveRows" disabled="@(!DataRows.Any(r => r.IsSelected))">− Remove Row</button>
+        <span class="row-count">@DataRows.Count row@(DataRows.Count == 1 ? "" : "s") (@DataRows.Count(r => r.IsSelected) selected)</span>
+        <button class="btn-add" @onclick="SaveToDatabase">Save</button>
+        <span>@saveMessage</span>
+        <span class="autosave-status">@autoSaveStatus</span>
+        <div class="export-controls">
+            <button class="btn-export-excel" @onclick="ExportToExcel">↓ Export Excel</button>
+            <button class="btn-export-pdf" @onclick="ExportToPdf">↓ Export PDF</button>
+        </div>
+    </div>
+    <!--Copy Overlay-->
+    @if (showCopyOptions)
+    {
+        <div class="copy-overlay">
+            <div class="copy-dialog">
+                <div class="copy-dialog-header">
+                    <h4>Copy from Last Row</h4>
+                    <button class="copy-dialog-close" @onclick="() => showCopyOptions = false">✕</button>
+                </div>
+                <div class="copy-dialog-body">
+                    <div class="copy-select-bar">
+                        <button class="btn-select-toggle" @onclick="SelectAllColumns">Select All</button>
+                        <button class="btn-select-toggle" @onclick="DeselectAllColumns">Deselect All</button>
+                        <span class="copy-count">@copyableColumns.Count(c => c.Include) of @copyableColumns.Count selected</span>
+                    </div>
+                    <div class="copy-options">
+                        @foreach (var col in copyableColumns)
+                        {
+                            <label>
+                                <input type="checkbox" checked="@col.Include"
+                                       @onchange="e => col.Include = (bool)e.Value" />
+                                @col.Name
+                            </label>
+                        }
+                    </div>
+                </div>
+                <div class="copy-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showCopyOptions = false">Cancel</button>
+                    <button class="btn-add" @onclick="ConfirmCopyRow">Copy Row</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Delete Dialog-->
+    @if (showDeleteConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Confirm Deletion</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>Are you sure you want to delete the <strong>@DataRows.Count(r => r.IsSelected)</strong> selected row(s)?</p>
+                    <p class="delete-warning">This action cannot be undone.</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showDeleteConfirmation = false">Cancel</button>
+                    <button class="btn-danger" @onclick="ConfirmRemoveRows">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+<!--Flag Comment Dialog-->
+@if (showFlagDialog)
+{
+    <div class="copy-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h4>Flag This Sheet</h4>
+            </div>
+            <div class="delete-dialog-body">
+                <textarea class="cell-input wide-input" rows="4" style="border: 1px solid #c5d8ee; border-radius: 3px;"
+                          placeholder="Describe the issue..." @bind="Sheet.FlagComment"></textarea>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="btn-secondary" @onclick="() => showFlagDialog = false">Cancel</button>
+                <button class="btn-danger" @onclick="ClearFlag">Clear Flag</button>
+                <button class="btn-add" @onclick="() => showFlagDialog = false">Done</button>
+            </div>
+        </div>
+    </div>
+}
+<!--Save Confirmation Dialog-->
+@if (showSaveConfirmation)
+{
+    <div class="copy-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h4>Confirm Save</h4>
+            </div>
+            <div class="delete-dialog-body">
+                <p>Are you sure you want to save this log to the database?</p>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="btn-secondary" @onclick="() => showSaveConfirmation = false">Cancel</button>
+                <button class="btn-add" @onclick="ConfirmSave">Yes, Save</button>
+            </div>
+        </div>
+    </div>
+}
+<!--Unsaved Changes Confirmation (Back button)-->
+@if (showLeaveConfirmation)
+{
+    <div class="copy-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h4>Unsaved Changes</h4>
+            </div>
+            <div class="delete-dialog-body">
+                <p>You have unsaved changes on this sheet. Save before leaving?</p>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="btn-secondary" @onclick="() => showLeaveConfirmation = false">Cancel</button>
+                <button class="btn-danger" @onclick="LeaveWithoutSaving">Discard &amp; Leave</button>
+                <button class="btn-add" @onclick="LeaveWithSaving">Save &amp; Leave</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool showCopyOptions = false;
+    private bool showDeleteConfirmation = false;
+    private string saveMessage = "";
+
+    private class CopyColumn
+    {
+        public string Name { get; set; }
+        public bool Include { get; set; } = true;
+        public CopyColumn(string name) => Name = name;
+    }
+
+    private List<CopyColumn> copyableColumns = new()
+    {
+        new CopyColumn("Sample Time"),
+        new CopyColumn("Test Time"),
+        new CopyColumn("Test Roll Width"),
+        new CopyColumn("Position"),
+        new CopyColumn("Roll Weight"),
+        new CopyColumn("Ultimate Stretch %"),
+        new CopyColumn("Average Stretch %"),
+        new CopyColumn("Unwind"),
+        new CopyColumn("Puncture"),
+        new CopyColumn("PW"),
+        new CopyColumn("Avg Thickness"),
+        new CopyColumn("Haze Lt. Trans."),
+        new CopyColumn("Gel Count"),
+        new CopyColumn("Remarks"),
+        new CopyColumn("Roll Status"),
+        new CopyColumn("Out Cling"),
+        new CopyColumn("Punct. Stdv."),
+        new CopyColumn("Stretch Force"),
+        new CopyColumn("# of Punct."),
+        new CopyColumn("Tail"),
+        new CopyColumn("Haze Stdv."),
+        new CopyColumn("In Cling"),
+        new CopyColumn("Pallet #"),
+    };
+
+    private void ConfirmCopyRow()
+    {
+        var last = DataRows.Last();
+        var newRow = new QCTestLogClassic.SheetRow();
+
+        if (IsIncluded("Sample Time")) newRow.SampleTime = last.SampleTime;
+        if (IsIncluded("Test Time")) newRow.TestTime = last.TestTime;
+        if (IsIncluded("Test Roll Width")) newRow.TestRollWidth = last.TestRollWidth;
+        if (IsIncluded("Position")) newRow.Position = last.Position;
+        if (IsIncluded("Roll Weight")) newRow.RollWeight = last.RollWeight;
+        if (IsIncluded("Ultimate Stretch %")) newRow.StretchP = last.StretchP;
+        if (IsIncluded("Average Stretch %")) newRow.AvgStretch = last.AvgStretch;
+        if (IsIncluded("Unwind")) newRow.Unwind = last.Unwind;
+        if (IsIncluded("Puncture")) newRow.Puncture = last.Puncture;
+        if (IsIncluded("PW")) newRow.PW = last.PW;
+        if (IsIncluded("Avg Thickness"))
+        {
+            newRow.ThicknessOuter1 = last.ThicknessOuter1;
+            newRow.ThicknessMiddle = last.ThicknessMiddle;
+            newRow.ThicknessOuter2 = last.ThicknessOuter2;
+            newRow.AvgThickness = last.AvgThickness;
+        }
+        if (IsIncluded("Haze Lt. Trans.")) newRow.LtTransm = last.LtTransm;
+        if (IsIncluded("Gel Count")) newRow.GelCount = last.GelCount;
+        if (IsIncluded("Remarks")) newRow.Remarks = last.Remarks;
+        if (IsIncluded("Roll Status")) newRow.RollStatus = last.RollStatus;
+        if (IsIncluded("Out Cling")) { newRow.AvgOutCling = last.AvgOutCling; newRow.OutClingGrade = last.OutClingGrade; }
+        if (IsIncluded("Punct. Stdv.")) newRow.PunStdv = last.PunStdv;
+        if (IsIncluded("Stretch Force")) newRow.StretchForce = last.StretchForce;
+        if (IsIncluded("# of Punct.")) newRow.NumPunct = last.NumPunct;
+        if (IsIncluded("Tail")) newRow.Tail = last.Tail;
+        if (IsIncluded("Haze Stdv.")) newRow.HazeStdv = last.HazeStdv;
+        if (IsIncluded("In Cling")) { newRow.AvgInCling = last.AvgInCling; newRow.InClingGrade = last.InClingGrade; }
+        if (IsIncluded("Pallet #")) newRow.PalletNum = last.PalletNum;
+
+        DataRows.Add(newRow);
+        showCopyOptions = false;
+    }
+
+    private bool IsIncluded(string name) =>
+        copyableColumns.First(c => c.Name == name).Include;
+
+    private void SelectAllColumns() => copyableColumns.ForEach(c => c.Include = true);
+    private void DeselectAllColumns() => copyableColumns.ForEach(c => c.Include = false);
+
+    private void OpenCopyDialog()
+    {
+        if (DataRows.Any())
+            showCopyOptions = true;
+        else
+            AddEmptyRow();
+    }
+
+    private void AddEmptyRow()
+    {
+        DataRows.Add(new QCTestLogClassic.SheetRow());
+    }
+
+    private void RequestRemoveRows()
+    {
+        if (DataRows.Any(r => r.IsSelected))
+        {
+            showDeleteConfirmation = true;
+        }
+    }
+
+    private void ConfirmRemoveRows()
+    {
+        DataRows.RemoveAll(r => r.IsSelected);
+        showDeleteConfirmation = false;
+
+        if (!DataRows.Any())
+        {
+            AddEmptyRow();
+        }
+    }
+
+    private async Task RefreshRules()
+    {
+        if (string.IsNullOrWhiteSpace(Sheet.FilmType))
+        {
+            allRules = new();
+            return;
+        }
+        allRules = await SpecRuleService.GetRulesForAsync(Sheet.FilmType);
+    }
+
+    private List<SpecRule> MatchingRules => allRules;
+
+    private string GetSetsEmptyMessage()
+    {
+        if (string.IsNullOrWhiteSpace(Sheet.FilmType))
+            return "Select a Film Type to see applicable specification sets.";
+        return "No specification rules match this Film Type. Add one in Film Type & Formula Settings.";
+    }
+
+    private RenderFragment RenderMetricTag(MetricBracket? bracket) => @<text>
+        @if (MatchingRules.Any())
+        {
+            <span class="set-tag @(bracket == null ? "no-match" : "")">
+                <span class="dot"></span>@(bracket != null ? $"{SpecRuleService.FormatRange(bracket.GaugeMin, bracket.GaugeMax, "ga")} / {SpecRuleService.FormatRange(bracket.WidthMin, bracket.WidthMax, "in")}" : "No match")
+            </span>
+        }
+    </text>;
+
+    private bool? IsWithinManualSpec(string value)
+    {
+        if (string.IsNullOrWhiteSpace(Sheet.LSL1) && string.IsNullOrWhiteSpace(Sheet.USL1))
+            return null;
+
+        if (!decimal.TryParse(value, out var actual))
+            return null;
+
+        if (decimal.TryParse(Sheet.LSL1, out var lsl) && actual < lsl)
+            return false;
+        if (decimal.TryParse(Sheet.USL1, out var usl) && actual > usl)
+            return false;
+
+        return true;
+    }
+
+    private RenderFragment RenderManualSpecTag(string value) => @<text>
+        @{ var status = IsWithinManualSpec(value); }
+        @if (status is not null)
+        {
+            <span class="set-tag @(status == false ? "no-match" : "")">
+                <span class="dot"></span>@(status == true ? "In Spec" : "Out of Spec")
+            </span>
+        }
+    </text>;
+
+    private void RecomputeAvgThickness(QCTestLogClassic.SheetRow row)
+    {
+        var values = new[] { row.ThicknessOuter1, row.ThicknessMiddle, row.ThicknessOuter2 }
+            .Select(v => decimal.TryParse(v, out var d) ? (decimal?)d : null)
+            .Where(v => v is not null)
+            .Select(v => v!.Value)
+            .ToList();
+
+        row.AvgThickness = values.Any() ? values.Average().ToString("0.###") : "";
+    }
+
+    private List<(string Label, string Note)> GetSpecNotes(SpecRule r)
+    {
+        var candidates = new List<(string Label, string Note)>
+        {
+            (SpecRule.SpecLabels[0], r.Spec1),
+            (SpecRule.SpecLabels[1], r.Spec2),
+            (SpecRule.SpecLabels[2], r.Spec3),
+            (SpecRule.SpecLabels[3], r.Spec4),
+            (SpecRule.SpecLabels[4], r.Spec5),
+            (SpecRule.SpecLabels[5], r.Spec6),
+        };
+        return candidates.Where(c => !string.IsNullOrWhiteSpace(c.Note)).ToList();
+    }
+
+    private async Task ExportToExcel()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Stretch Film Test Result Log");
+        sb.AppendLine($"Date,{Esc(Sheet.Date.ToString("yyyy-MM-dd"))},QC Tech,{Esc(Sheet.QCTech)},Shift,{Esc(Sheet.Shift)},Crew,{Esc(Sheet.Crew)}");
+        sb.AppendLine($"Line,{Esc(Sheet.Line)},Film Type,{Esc(Sheet.FilmType)},Formula,{Esc(Sheet.Formula)},Gauge,{Esc(Sheet.Gauge)}");
+        sb.AppendLine($"Roll Weight LSL (Manual),{Esc(Sheet.LSL1)},Roll Weight Target (Manual),{Esc(Sheet.Target1)},Roll Weight USL (Manual),{Esc(Sheet.USL1)}");
+        sb.AppendLine();
+        sb.AppendLine("Specification Sets");
+        foreach (var rule in MatchingRules)
+        {
+            sb.AppendLine($"Set,{Esc(rule.SetName)}");
+            for (int m = 1; m <= SpecRule.MetricLabels.Length; m++)
+            {
+                var fc = rule.FieldConfigFor(m);
+                var gaugeOnly = SpecRule.GaugeOnlyMetricIndexes.Contains(m);
+                foreach (var b in rule.BracketsFor(m))
+                {
+                    var fields = new List<string> { "", Esc(SpecRule.MetricLabels[m - 1]), "Gauge", SpecRuleService.FormatRange(b.GaugeMin, b.GaugeMax) };
+                    if (!gaugeOnly) { fields.Add("Width"); fields.Add(SpecRuleService.FormatRange(b.WidthMin, b.WidthMax)); }
+                    if (fc.HasLSL) { fields.Add("LSL"); fields.Add(Esc(b.LSL)); }
+                    if (fc.HasTarget) { fields.Add("Target"); fields.Add(Esc(b.Target)); }
+                    if (fc.HasUSL) { fields.Add("USL"); fields.Add(Esc(b.USL)); }
+                    sb.AppendLine(string.Join(",", fields));
+                }
+            }
+        }
+        sb.AppendLine();
+        sb.AppendLine("Sample Time,Test Time,Roll Width,Test Roll Width,Position,Roll Weight,Ultimate Stretch %,Average Stretch %,Unwind,Out Cling,Out Cling Grade,In Cling,In Cling Grade,Barcode,Pallet #,Puncture,PW,Punct. Stdv.,Stretch Force,# of Punct.,Tail,Thickness Outer 1,Thickness Middle,Thickness Outer 2,Avg Thickness,Haze Lt. Trans.,Haze Stdv.,Gel Count,Remarks,Roll Status");
+        foreach (var row in DataRows)
+        {
+            sb.AppendLine(string.Join(",",
+                Esc(row.SampleTime.ToString("HH:mm")),
+                Esc(row.TestTime.ToString("HH:mm")),
+                Esc(row.RollWidth), Esc(row.TestRollWidth), Esc(row.Position), Esc(row.RollWeight),
+                Esc(row.StretchP), Esc(row.AvgStretch), Esc(row.Unwind),
+                Esc(row.AvgOutCling), Esc(row.OutClingGrade), Esc(row.AvgInCling), Esc(row.InClingGrade), Esc(row.Barcode), Esc(row.PalletNum), Esc(row.Puncture),
+                Esc(row.PW), Esc(row.PunStdv), Esc(row.StretchForce),
+                Esc(row.NumPunct), Esc(row.Tail), Esc(row.ThicknessOuter1), Esc(row.ThicknessMiddle), Esc(row.ThicknessOuter2), Esc(row.AvgThickness),
+                Esc(row.LtTransm), Esc(row.HazeStdv), Esc(row.GelCount),
+                Esc(row.Remarks), Esc(row.RollStatus)));
+        }
+        await JS.InvokeVoidAsync("downloadFile", "StretchFilmTestLog.csv", sb.ToString(), "text/csv;charset=utf-8;");
+    }
+
+    private async Task ExportToPdf()
+    {
+        await JS.InvokeVoidAsync("printPage");
+    }
+
+    private static string Esc(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        return s;
+    }
+
+    private bool showSaveConfirmation = false;
+    private bool showFlagDialog = false;
+
+    private void ClearFlag()
+    {
+        Sheet.FlagComment = "";
+        showFlagDialog = false;
+    }
+
+    private void SaveToDatabase()
+    {
+        showSaveConfirmation = true;
+    }
+
+    private async Task ConfirmSave()
+    {
+        try
+        {
+            await PersistAsync();
+            saveMessage = "Saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error: {ex.Message}";
+        }
+        showSaveConfirmation = false;
+    }
+
+    <!--Autosave / unsaved-changes tracking-->
+    private int? savedId;
+    private string lastSavedSnapshot = "";
+    private string autoSaveStatus = "";
+    private bool showLeaveConfirmation = false;
+    private System.Threading.Timer? autoSaveTimer;
+
+    private string Snapshot() => System.Text.Json.JsonSerializer.Serialize(new { Sheet, DataRows });
+
+    private async Task PersistAsync()
+    {
+        var setNames = string.Join(", ", MatchingRules.Select(r => r.SetName));
+        foreach (var row in DataRows)
+        {
+            row.SpecSet = setNames;
+        }
+
+        if (savedId is int id)
+        {
+            await QCTestLogService.UpdateSheetAsync(id, Sheet, DataRows);
+        }
+        else
+        {
+            savedId = await QCTestLogService.SaveSheetAsync(Sheet, DataRows, CurrentUserService.UserId);
+        }
+        lastSavedSnapshot = Snapshot();
+    }
+
+    private async Task AutoSaveTick()
+    {
+        if (Snapshot() == lastSavedSnapshot) return;
+
+        try
+        {
+            await PersistAsync();
+            autoSaveStatus = $"Autosaved at {DateTime.Now:h:mm:ss tt}";
+        }
+        catch (Exception ex)
+        {
+            autoSaveStatus = $"Autosave failed: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private void GoHome()
+    {
+        if (Snapshot() != lastSavedSnapshot)
+        {
+            showLeaveConfirmation = true;
+        }
+        else
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private async Task LeaveWithSaving()
+    {
+        await ConfirmSave();
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private void LeaveWithoutSaving()
+    {
+        showLeaveConfirmation = false;
+        Nav.NavigateTo("/");
+    }
+
+    private string autosaveMode = "Interval";
+
+    protected override async Task OnInitializedAsync()
+    {
+        filmTypes = await SpecOptionsService.GetFilmTypesAsync();
+        await CurrentUserService.EnsureInitializedAsync();
+
+        var editRequest = EditRequestService.Consume("Test");
+        if (editRequest is not null)
+        {
+            var (id, payload) = editRequest.Value;
+            var (header, rows) = ((QCTestLogClassic.SheetHeader, List<QCTestLogClassic.SheetRow>))payload;
+            Sheet = header;
+            DataRows.Clear();
+            DataRows.AddRange(rows);
+            savedId = id;
+            await RefreshRules();
+        }
+        else
+        {
+            DataRows.Add(new QCTestLogClassic.SheetRow());
+            if (string.IsNullOrWhiteSpace(Sheet.QCTech))
+            {
+                Sheet.QCTech = CurrentUserService.UserName;
+            }
+        }
+
+        lastSavedSnapshot = Snapshot();
+
+        var settings = await AutosaveSettingsService.GetSettingsAsync();
+        autosaveMode = settings.Mode;
+        if (autosaveMode == "Interval")
+        {
+            autoSaveTimer = new System.Threading.Timer(
+                _ => InvokeAsync(AutoSaveTick),
+                null,
+                TimeSpan.FromSeconds(settings.IntervalSeconds),
+                TimeSpan.FromSeconds(settings.IntervalSeconds));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && autosaveMode == "OnChange")
+        {
+            await AutoSaveTick();
+        }
+    }
+
+    public void Dispose()
+    {
+        autoSaveTimer?.Dispose();
+    }
+
+    private QCTestLogClassic.SheetHeader Sheet = new();
+    private List<QCTestLogClassic.SheetRow> DataRows = new();
+    private List<(int Id, string Name)> filmTypes = new();
+    private List<SpecRule> allRules = new();
+}

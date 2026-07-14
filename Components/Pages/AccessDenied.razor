@@ -1,0 +1,17 @@
+@page "/access-denied"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+
+<PageTitle>Access Denied</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Access Denied</div>
+    <p style="padding: 16px 20px;">You don't have permission to view that page.</p>
+    <div style="padding: 0 20px 20px;">
+        <button class="btn-back" @onclick="GoHome">← Back to Home</button>
+    </div>
+</div>
+
+@code {
+    private void GoHome() => Nav.NavigateTo("/");
+}

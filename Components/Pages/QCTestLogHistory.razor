@@ -1,0 +1,162 @@
+@page "/qc-test-log-history"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject QCTestLogService QCTestLogService
+@inject EditRequestService EditRequestService
+@inject CurrentUserService CurrentUserService
+
+<PageTitle>Stretch Film Test Log History</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Stretch Film Test Result Log — Saved History</div>
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+
+    <div class="row-controls">
+        <input type="text" class="search-box" placeholder="Search by date, QC tech, shift, crew, line, film type, barcode, pallet #..."
+               value="@searchTerm" @oninput="OnSearchInput" />
+        <span class="row-count">@FilteredSheets.Count() of @allSheets.Count log@(allSheets.Count == 1 ? "" : "s")</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <p class="history-empty">Loading...</p>
+    }
+    else if (!FilteredSheets.Any())
+    {
+        <p class="history-empty">No matching logs found.</p>
+    }
+    else
+    {
+        <div class="history-list">
+            @foreach (var sheet in FilteredSheets)
+            {
+                var isExpanded = sheet.header == expandedHeader;
+                <div class="history-card">
+                    <div class="history-card-header" @onclick="() => ToggleExpand(sheet.header)">
+                        <div class="history-card-main">
+                            @if (!string.IsNullOrWhiteSpace(sheet.header.FlagComment))
+                            {
+                                <span class="history-field" title="@sheet.header.FlagComment">🚩</span>
+                            }
+                            <span class="history-date">@sheet.header.Date.ToString("yyyy-MM-dd")</span>
+                            <span class="history-field"><strong>QC Tech:</strong> @sheet.header.QCTech</span>
+                            <span class="history-field"><strong>Shift:</strong> @sheet.header.Shift</span>
+                            <span class="history-field"><strong>Crew:</strong> @sheet.header.Crew</span>
+                            <span class="history-field"><strong>Line:</strong> @sheet.header.Line</span>
+                            <span class="history-field"><strong>Film:</strong> @sheet.header.FilmType</span>
+                            <span class="history-field">@sheet.rows.Count row@(sheet.rows.Count == 1 ? "" : "s")</span>
+                            <span class="history-field"><strong>Created by:</strong> @(sheet.header.CreatedByName ?? "Unknown")</span>
+                        </div>
+                        <div class="history-card-actions">
+                            @if (CanEdit(sheet.header))
+                            {
+                                <button class="btn-add btn-history-edit" @onclick="() => EditSheet(sheet.Id, sheet.header, sheet.rows)" @onclick:stopPropagation="true">Edit</button>
+                                <button class="btn-danger btn-history-delete" @onclick="() => RequestDelete(sheet.Id)" @onclick:stopPropagation="true">Delete</button>
+                            }
+                            <span class="history-toggle">@(isExpanded ? "▲" : "▼")</span>
+                        </div>
+                    </div>
+                    @if (isExpanded)
+                    {
+                        <QCTestLogSheetView Header="sheet.header" Rows="sheet.rows" />
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (pendingDeleteId is not null)
+{
+    <div class="copy-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h4>Confirm Deletion</h4>
+            </div>
+            <div class="delete-dialog-body">
+                <p>Are you sure you want to delete this saved log?</p>
+                <p class="delete-warning">This action cannot be undone.</p>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="btn-secondary" @onclick="CancelDelete">Cancel</button>
+                <button class="btn-danger" @onclick="ConfirmDelete">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<(int Id, QCTestLogClassic.SheetHeader header, List<QCTestLogClassic.SheetRow> rows)> allSheets = new();
+    private string searchTerm = "";
+    private bool isLoading = true;
+    private QCTestLogClassic.SheetHeader? expandedHeader;
+    private int? pendingDeleteId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUserService.EnsureInitializedAsync();
+        allSheets = await QCTestLogService.GetAllSheetsAsync();
+        isLoading = false;
+    }
+
+    private bool CanEdit(QCTestLogClassic.SheetHeader header) =>
+        CurrentUserService.IsMaster || (header.CreatedByUserId is not null && header.CreatedByUserId == CurrentUserService.UserId);
+
+    private IEnumerable<(int Id, QCTestLogClassic.SheetHeader header, List<QCTestLogClassic.SheetRow> rows)> FilteredSheets =>
+        string.IsNullOrWhiteSpace(searchTerm) ? allSheets : allSheets.Where(Matches);
+
+    private bool Matches((int Id, QCTestLogClassic.SheetHeader header, List<QCTestLogClassic.SheetRow> rows) sheet)
+    {
+        var term = searchTerm.Trim();
+        var header = sheet.header;
+
+        if (Contains(header.Date.ToString("yyyy-MM-dd"), term) ||
+            Contains(header.QCTech, term) ||
+            Contains(header.Shift, term) ||
+            Contains(header.Crew, term) ||
+            Contains(header.Line, term) ||
+            Contains(header.FilmType, term) ||
+            Contains(header.Formula, term))
+        {
+            return true;
+        }
+
+        return sheet.rows.Any(r =>
+            Contains(r.Barcode, term) ||
+            Contains(r.PalletNum, term) ||
+            Contains(r.Remarks, term) ||
+            Contains(r.RollStatus, term));
+    }
+
+    private static bool Contains(string? field, string term) =>
+        !string.IsNullOrEmpty(field) && field.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+    private void OnSearchInput(ChangeEventArgs e) => searchTerm = e.Value?.ToString() ?? "";
+
+    private void ToggleExpand(QCTestLogClassic.SheetHeader header)
+    {
+        expandedHeader = expandedHeader == header ? null : header;
+    }
+
+    private void RequestDelete(int id) => pendingDeleteId = id;
+
+    private void CancelDelete() => pendingDeleteId = null;
+
+    private async Task ConfirmDelete()
+    {
+        if (pendingDeleteId is not int id) return;
+
+        await QCTestLogService.DeleteSheetAsync(id);
+        allSheets.RemoveAll(s => s.Id == id);
+        pendingDeleteId = null;
+    }
+
+    private void EditSheet(int id, QCTestLogClassic.SheetHeader header, List<QCTestLogClassic.SheetRow> rows)
+    {
+        EditRequestService.SetPending("Test", id, (header, rows));
+        Nav.NavigateTo("/stretch-film-test-result-log");
+    }
+
+    private void GoHome() => Nav.NavigateTo("/");
+}

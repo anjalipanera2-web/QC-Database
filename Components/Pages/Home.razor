@@ -1,0 +1,102 @@
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject NavigationManager Nav
+@inject CurrentUserService CurrentUserService
+@rendermode InteractiveServer
+
+<PageTitle>Home</PageTitle>
+
+<div class="home-taskbar">
+    <span>Home</span>
+    <span class="taskbar-user">
+        Logged in as @CurrentUserService.UserName@(CurrentUserService.IsMaster ? " (Master)" : "")
+        <a href="/logout" data-enhance-nav="false">Logout</a>
+    </span>
+</div>
+
+<div class="home-container">
+    <div class="sheet-container">
+        <div class="sheet-title">QC — Quality Control</div>
+        <div class="home-cards">
+            <div class="home-card" @onclick="OpenStretchFilmAuditSheet">
+                <div class="home-card-title">Stretch Film Audit Log</div>
+                <div class="home-card-desc">Reel audit with pallet weights, charting instructions, and grading</div>
+            </div>
+            <div class="home-card" @onclick="OpenStretchFilmTestSheet">
+                <div class="home-card-title">Stretch Film Test Result Log</div>
+                <div class="home-card-desc">Test roll measurements including stretch, cling, puncture, and thickness</div>
+            </div>
+            <div class="home-card" @onclick="OpenDailyQualityIssuesLog">
+                <div class="home-card-title">Daily Quality Issues Log</div>
+                <div class="home-card-desc">Per-line film type, quality issues, and layers for each shift</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-container">
+        <div class="sheet-title">OP — Operator</div>
+        <div class="home-cards">
+            <div class="home-card" @onclick="OpenOperatorSheet">
+                <div class="home-card-title">Operator Self Inspection</div>
+                <div class="home-card-desc">Line conditions, pallet data, and product specification checks per shift</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-container">
+        <div class="sheet-title">Databases</div>
+        <div class="home-cards">
+            <div class="home-card" @onclick="OpenTestLogHistory">
+                <div class="home-card-title">View Saved Test Logs</div>
+                <div class="home-card-desc">Browse and search past Stretch Film Test Result Logs</div>
+            </div>
+            <div class="home-card" @onclick="OpenAuditLogHistory">
+                <div class="home-card-title">View Saved Audit Logs</div>
+                <div class="home-card-desc">Browse and search past Stretch Film Reel Audit Logs</div>
+            </div>
+            <div class="home-card" @onclick="OpenOperatorLogHistory">
+                <div class="home-card-title">View Saved Operator Logs</div>
+                <div class="home-card-desc">Browse and search past Operator Self Inspection Logs</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-container">
+        <div class="sheet-title">Settings</div>
+        <div class="home-cards">
+            <div class="home-card" @onclick="OpenSpecOptionsSettings">
+                <div class="home-card-title">Film Type &amp; Formula Settings</div>
+                <div class="home-card-desc">Manage the list of Film Types and Formulas available on the Test Result Log</div>
+            </div>
+            <div class="home-card" @onclick="OpenAutosaveSettings">
+                <div class="home-card-title">Autosave Settings</div>
+                <div class="home-card-desc">Choose how often sheets automatically save your work while editing</div>
+            </div>
+            @if (CurrentUserService.IsMaster)
+            {
+                <div class="home-card" @onclick="OpenManageUsers">
+                    <div class="home-card-title">Manage Users</div>
+                    <div class="home-card-desc">Add, remove, or promote operators and QC techs who can log in</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await CurrentUserService.EnsureInitializedAsync();
+    }
+
+    private void OpenManageUsers() => Nav.NavigateTo("/manage-users");
+    private void OpenOperatorSheet() => Nav.NavigateTo("/operator-self-inspection");
+    private void OpenStretchFilmAuditSheet() => Nav.NavigateTo("/stretch-film-reel-audit-log");
+    private void OpenStretchFilmTestSheet() => Nav.NavigateTo("/stretch-film-test-result-log");
+    private void OpenDailyQualityIssuesLog() => Nav.NavigateTo("/daily-quality-issues-log");
+    private void OpenTestLogHistory() => Nav.NavigateTo("/qc-test-log-history");
+    private void OpenAuditLogHistory() => Nav.NavigateTo("/qc-audit-log-history");
+    private void OpenOperatorLogHistory() => Nav.NavigateTo("/operator-audit-log-history");
+    private void OpenSpecOptionsSettings() => Nav.NavigateTo("/film-type-formula-settings");
+    private void OpenAutosaveSettings() => Nav.NavigateTo("/autosave-settings");
+}

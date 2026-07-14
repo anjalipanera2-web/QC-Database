@@ -1,0 +1,160 @@
+@using ProductionSheet.Components.Pages
+
+@if (!string.IsNullOrWhiteSpace(Header.FlagComment))
+{
+    <div class="set-notes">
+        <div class="set-note"><strong>🚩 Flagged:</strong> @Header.FlagComment</div>
+    </div>
+}
+
+<div class="table-scroll-wrapper">
+    <table class="sheet-table view-only-table">
+        <thead>
+            <!--Row 1: Date, Operator Name, Shift, Crew, Order & Item, Product Type, Width, Footage, Weight Spec Range-->
+            <tr class="header-row-1">
+                <th rowspan="4" class="text-center" style="vertical-align: middle; width: 40px;">#</th>
+                <th colspan="1">Date</th>
+                <th colspan="1">Operator Full Name</th>
+                <td colspan="2"><input type="text" readonly value="@Header.OperatorName" class="cell-input wide-input" /></td>
+                <th colspan="2">Shift</th>
+                <th colspan="2">Crew</th>
+                <th colspan="3">Order &amp; Item </th>
+                <th colspan="3">Product Type</th>
+                <th colspan="3">Width</th>
+                <th colspan="3">Footage</th>
+                <th colspan="3">Weight Spec Range</th>
+            </tr>
+            <!--Row 2: Date Input, Formula Code, Shift Selector, Crew Selector, OI PT Width Footage WS 1-->
+            <tr class="header-row-2">
+                <td rowspan="2"><input type="text" readonly value="@Header.Date.ToString("yyyy-MM-dd")" class="cell-input wide-input" /></td>
+                <th colspan="1">Formula Code</th>
+                <td colspan="2"><input type="text" readonly value="@Header.FormulaCode" class="cell-input wide-input" /></td>
+                <td rowspan="2" colspan="2"><input type="text" readonly value="@Header.Shift" class="cell-input wide-input" /></td>
+                <td colspan="2" rowspan="2"><input type="text" readonly value="@Header.Crew" class="cell-input wide-input" /></td>
+                <th>1)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.OrderItem1" class="cell-input wide-input" /></td>
+                <th>1)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.ProductType1" class="cell-input wide-input" /></td>
+                <th>1)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.Width1" class="cell-input wide-input" /></td>
+                <th>1)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.Footage1" class="cell-input wide-input" /></td>
+                <th>1)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.WeightSpec1" class="cell-input wide-input" /></td>
+            </tr>
+            <!--Row 3: Line, OI PT Width Footage WS 2-->
+            <tr class="header-row-3">
+                <th colspan="1">Line</th>
+                <td colspan="2"><input type="text" readonly value="@Header.LineNumber" class="cell-input wide-input" /></td>
+                <th>2)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.OrderItem2" class="cell-input wide-input" /></td>
+                <th>2)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.ProductType2" class="cell-input wide-input" /></td>
+                <th>2)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.Width2" class="cell-input wide-input" /></td>
+                <th>2)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.Footage2" class="cell-input wide-input" /></td>
+                <th>2)</th>
+                <td colspan="2"><input type="text" readonly value="@Header.WeightSpec2" class="cell-input wide-input" /></td>
+            </tr>
+            <!--Row 4: Header Labels-->
+            <tr class="header-row-4">
+                <td colspan="2"></td>
+                <th colspan="12">Charting Instructions Checklist</th>
+                <th colspan="9">Product Specification Range</th>
+            </tr>
+            <!--Row 5: Time, Line Conditions, BoxNum, Type, Unit, Ex. Pallet Ticket, S% U SF HC P H/LTT Ge PW Gr Headers-->
+            <tr class="header-row-5">
+                <th rowspan="4" colspan="1" style="background-color: #f8f9fa;"></th>
+                <th rowspan="4" colspan="1">Time</th>
+                <th colspan="5" rowspan="2">Line Conditions</th>
+                <th>Box #</th>
+                <td><input type="text" readonly value="@Header.BoxNumber" class="cell-input wide-input" /></td>
+                <th>Type</th>
+                <td><input type="text" readonly value="@Header.PalletType" class="cell-input wide-input" /></td>
+                <th>Unit</th>
+                <td><input type="text" readonly value="@Header.Unit" class="cell-input wide-input" /></td>
+                <th>Ex. Pallet Ticket:</th>
+                <td colspan="1"><input type="text" readonly value="@Header.PalletTicket" class="cell-input wide-input" /></td>
+                <th rowspan="4" colspan="1">Stretch %</th>
+                <th rowspan="4" colspan="1">Unwind</th>
+                <th rowspan="4" colspan="1">Stretch Force</th>
+                <th rowspan="4" colspan="1">Hand Cling</th>
+                <th rowspan="4" colspan="1">Puncture</th>
+                <th rowspan="4" colspan="1">Haze/LT. Transmitance</th>
+                <th rowspan="4" colspan="1">Gels</th>
+                <th rowspan="4" colspan="1">Pallet Wrap (PW-P/F; Tail-G/O/OW/W/N</th>
+                <th rowspan="4" colspan="1">Grade</th>
+            </tr>
+            <!--Row 6: Pallet Size, Layers, Product Selection, Box Label-->
+            <tr class="header-row-6">
+                <th>Pallet Size:</th>
+                <td><input type="text" readonly value="@Header.PalletSize" class="cell-input wide-input" /></td>
+                <th>Layers/# rolls or cases</th>
+                <td><input type="text" readonly value="@Header.Layers" class="cell-input wide-input" /></td>
+                <th>Product:</th>
+                <td><input type="text" readonly value="@Header.Product" class="cell-input wide-input" /></td>
+                <th>Box Label:</th>
+                <td><input type="text" readonly value="@Header.BoxLabel" class="cell-input wide-input" /></td>
+            </tr>
+            <!--Row 7: Headers-->
+            <tr class="header-row-7">
+                <th rowspan="2">Line Speed</th>
+                <th colspan="2">Vacuum</th>
+                <th colspan="2">Chiller</th>
+                <th colspan="2">Pallet</th>
+                <th rowspan="2">Crush Core #</th>
+                <th rowspan="2">Pos.</th>
+                <th rowspan="2">Width</th>
+                <th rowspan="2">Weight</th>
+                <th rowspan="2">Core Prot.</th>
+                <th rowspan="2">Film & Reel Visuals</th>
+            </tr>
+            <!--Row 8: Subheaders-->
+            <tr class="header-row-8">
+                <th>1</th>
+                <th>2</th>
+                <th>1</th>
+                <th>2</th>
+                <th>Barcode</th>
+                <th>#</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Rows)
+            {
+                <tr class="data-row">
+                    <td class="text-center" style="vertical-align: middle; background-color: #f8f9fa;"></td>
+                    <td><div class="time-input">@row.Time.ToString("HH:mm")</div></td>
+                    <td><input type="text" readonly value="@row.LineSpeed" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Vacuum1" class="cell-input" /></td>
+                    <td><input type="text" readonly value="@row.Vacuum2" class="cell-input" /></td>
+                    <td><input type="text" readonly value="@row.TChiller1" class="cell-input" /></td>
+                    <td><input type="text" readonly value="@row.TChiller2" class="cell-input" /></td>
+                    <td><input type="text" readonly value="@row.PalletBarcode" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.PalletNum" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.CrushCore" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Pos" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Width" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Weight" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.CoreProt" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.FilmRV" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.StretchP" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Unwind" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.StretchF" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.HandCling" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Puncture" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.LtTransm" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Gels" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.PalletWrap" class="cell-input wide-input" /></td>
+                    <td><input type="text" readonly value="@row.Grade" class="cell-input wide-input" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public OperatorSelfInspection.SheetHeader Header { get; set; } = new();
+    [Parameter] public List<OperatorSelfInspection.SheetRow> Rows { get; set; } = new();
+}

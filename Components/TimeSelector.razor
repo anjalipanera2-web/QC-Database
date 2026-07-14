@@ -1,0 +1,88 @@
+﻿<div class="time-picker">
+    <select class="time-select"
+        value="@SelectedHour"
+        @onchange="e => SelectHour(int.Parse(e.Value.ToString()))"
+        @onkeypress="TypeToScrollHour">
+        @for (int h = 0; h < 24; h++)
+        {
+            <option value="@h">@($"{h:D2}")</option>
+        }
+    </select>
+    <span class="time-colon">:</span>
+    <select class="time-select"
+            value="@SelectedMinute"
+            @onchange="e => SelectMinute(int.Parse(e.Value.ToString()))"
+            @onkeypress="TypeToScrollMinute">
+        @foreach (int m in MinuteOptions)
+        {
+            <option value="@m">@($"{m:D2}")</option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter] public TimeOnly Value { get; set; }
+    [Parameter] public EventCallback<TimeOnly> ValueChanged { get; set; }
+    [Parameter] public bool FifteenMinuteInterval { get; set; } = false;
+
+    private int SelectedHour => Value.Hour;
+    private int SelectedMinute => Value.Minute;
+
+    private string _hourBuffer = "";
+    private string _minuteBuffer = "";
+    private System.Timers.Timer? _clearHourTimer;
+    private System.Timers.Timer? _clearMinuteTimer;
+
+    private IEnumerable<int> MinuteOptions => FifteenMinuteInterval
+        ? new[] { 0, 15, 30, 45 }
+        : Enumerable.Range(0, 60);
+
+    private async Task SelectHour(int hour)
+    {
+        hour = Math.Clamp(hour, 0, 23);
+        Value = new TimeOnly(hour, SelectedMinute);
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task SelectMinute(int minute)
+    {
+        minute = Math.Clamp(minute, 0, 59);
+        if (FifteenMinuteInterval)
+            minute = (int)Math.Round(minute / 15.0) * 15;
+        if (minute == 60) minute = 45;
+        Value = new TimeOnly(SelectedHour, minute);
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private void TypeToScrollHour(KeyboardEventArgs e)
+    {
+        if (!char.IsDigit(e.Key[0])) return;
+        _hourBuffer += e.Key;
+
+        if (int.TryParse(_hourBuffer, out int val))
+            SelectHour(Math.Clamp(val, 0, 23));
+
+        ResetTimer(ref _clearHourTimer, () => _hourBuffer = "");
+    }
+
+    private void TypeToScrollMinute(KeyboardEventArgs e)
+    {
+        if (!char.IsDigit(e.Key[0])) return;
+        _minuteBuffer += e.Key;
+
+        if (int.TryParse(_minuteBuffer, out int val))
+            SelectMinute(Math.Clamp(val, 0, FifteenMinuteInterval ? 45 : 59));
+
+        ResetTimer(ref _clearMinuteTimer, () => _minuteBuffer = "");
+    }
+
+    private void ResetTimer(ref System.Timers.Timer? timer, Action onElapsed)
+    {
+        timer?.Stop();
+        timer?.Dispose();
+        timer = new System.Timers.Timer(1000);
+        timer.Elapsed += (s, ev) => onElapsed();
+        timer.AutoReset = false;
+        timer.Start();
+    }
+}

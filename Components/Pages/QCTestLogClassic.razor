@@ -1,0 +1,566 @@
+@page "/stretch-film-test-result-log-classic"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode InteractiveServer
+@inject Microsoft.AspNetCore.Components.NavigationManager Nav
+@inject IJSRuntime JS
+@inject QCTestLogService QCTestLogService
+@inject SpecOptionsService SpecOptionsService
+
+<PageTitle>Stretch Film Test Result Log (Classic)</PageTitle>
+
+<div class="sheet-container">
+    <div class="sheet-title">Stretch Film Test Result Log (Classic)</div>
+    <!--Back Button-->
+    <button class="btn-back" @onclick="GoHome">← Back</button>
+    
+    <div class="table-scroll-wrapper">
+        <table class="sheet-table">
+            <thead>
+                <!--Row 1: Date, Specifications-->
+                <tr class="header-row-1">
+                    <th rowspan="3" class="text-center" style="vertical-align: middle; width: 40px;">Select</th>
+                    <th colspan="1">Date</th>
+                    <td colspan="3"><input type="date" @bind="Sheet.Date" @bind:format="yyyy-MM-dd" class="cell-input wide-input" /></td>
+                    <th colspan="11">Specifications</th>
+                </tr>
+                <!--Row 2: QC Tech, USL 1-4, Spec 1-6, Film Type-->
+                <tr class="header-row-2">
+                    <th rowspan="2">QC Tech:</th>
+                    <td rowspan="2" colspan="3"><input type="text" @bind="Sheet.QCTech" class="cell-input wide-input" /></td>
+                    <th rowspan="2">USL</th>
+                    <td><input type="text" @bind="Sheet.USL1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.USL2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.USL3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.USL4" class="cell-input wide-input" /></td>
+                    <td rowspan="6"><textarea @bind="Sheet.Spec1" class="cell-input wide-input"></textarea></td>
+                    <td rowspan="6"><textarea @bind="Sheet.Spec2" class="cell-input wide-input"></textarea></td>
+                    <td rowspan="6"><textarea @bind="Sheet.Spec3" class="cell-input wide-input"></textarea></td>
+                    <td rowspan="6"><textarea @bind="Sheet.Spec4" class="cell-input wide-input"></textarea></td>
+                    <td rowspan="6"><textarea @bind="Sheet.Spec5" class="cell-input wide-input"></textarea></td>
+                    <td rowspan="6"><textarea @bind="Sheet.Spec6" class="cell-input wide-input"></textarea></td>
+                    <th colspan="2">Film Type</th>
+                </tr>
+                <!--Row 3: USL 5-8, Film Type-->
+                <tr class="header-row-3">
+                    <td><input type="text" @bind="Sheet.USL5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.USL6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.USL7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.USL8" class="cell-input wide-input" /></td> 
+                    <td colspan="2">
+                        <select @bind="Sheet.FilmType" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            @foreach (var ft in filmTypes)
+                            {
+                                <option value="@ft.Name">@ft.Name</option>
+                            }
+                        </select>
+                    </td>
+                </tr>
+                <!--Row 4: Shift, Crew, Target 1-4, Gauge-->
+                <tr class="header-row-4">
+                    <th rowspan="7" colspan="1" style="background-color: #f8f9fa;"></th>
+                    <th>Shift</th>
+                    <td>
+                        <select @bind="Sheet.Shift" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="Day">Day</option>
+                            <option value="Night">Night</option>
+                        </select>
+                    </td>
+                    <th>Crew</th>
+                    <td>
+                        <select @bind="Sheet.Crew" class="cell-input wide-input">
+                            <option value="">-- Select --</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </td>
+                    <th rowspan="2">Target</th>
+                    <td><input type="text" @bind="Sheet.Target1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target4" class="cell-input wide-input" /></td>
+                    <th colspan="2">Gauge</th>
+                </tr>
+                <!--Row 5: Line, Target 5-8, Gauge-->
+                <tr class="header-row-5">
+                    <th>Line</th>
+                    <td colspan="3"><input type="text" @bind="Sheet.Line" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.Target8" class="cell-input wide-input" /></td>
+                    <td colspan="2"><input type="text" @bind="Sheet.Gauge" class="cell-input wide-input" /></td>
+                </tr>
+                <!--Row 6: LSL 1-4, Formula-->
+                <tr class="header-row-6">
+                    <th rowspan="2" colspan="4"></th>
+                    <th rowspan="2">LSL</th>
+                    <td><input type="text" @bind="Sheet.LSL1" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.LSL2" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.LSL3" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.LSL4" class="cell-input wide-input" /></td>
+                    <th colspan="2">Formula</th>
+                </tr>
+                <!--Row 7: Test Width, Gauge, LSL 5-8, Formula Input-->
+                <tr class="header-row-7">
+                    <td><input type="text" @bind="Sheet.LSL5" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.LSL6" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.LSL7" class="cell-input wide-input" /></td>
+                    <td><input type="text" @bind="Sheet.LSL8" class="cell-input wide-input" /></td>
+                    <td colspan="2">
+                        <input type="text" @bind="Sheet.Formula" class="cell-input wide-input" />
+                    </td>
+                </tr>
+                <!--Row 8: Sample Width, Gauge, Labels-->
+                <tr class="header-row-8">
+                    <th rowspan="3">Select</th>
+                    <th rowspan="3">Sample Time</th>
+                    <th rowspan="3">Test Time</th>
+                    <th rowspan="3">Roll Width</th>
+                    <th rowspan="3">Test Roll Width</th>
+                    <th rowspan="3">Pos.</th>
+                    <th rowspan="3">Roll weight</th>
+                    <th rowspan="3">Ultimate Stretch %</th>
+                    <th rowspan="2">Average Stretch %</th>
+                    <th rowspan="3">Unwind</th>
+                    <th rowspan="3">Avg. Cling</th>
+                    <th rowspan="1">Puncture</th>
+                    <th rowspan="2">PW</th>
+                    <th rowspan="3">Avg Thickness</th>
+                    <th rowspan="2">Haze Lt. Trans.</th>
+                    <th rowspan="3">Gel Count</th>
+                    <th rowspan="3">Roll / Film Visuals / Remarks</th>
+                    <th rowspan="3">Roll Status</th>
+                </tr>
+                <!--Row 9: Labels-->
+                <tr class="header-row-9">
+                    <th>Stdv.</th>
+                </tr>
+                <!--Row 10: Labels-->
+                <tr class="header-row-10">
+                    <th>Stretch Force</th>
+                    <th># of Punct.</th>
+                    <th>Tail</th>
+                    <th>Stdv.</th>
+                </tr>
+            </thead>
+            <!--Iterative Row Inputs-->
+            @foreach (var row in DataRows)
+            {
+            <tbody>
+                    <tr class="data-row-1">
+                        <td rowspan="4" class="text-center" style="vertical-align: middle; background-color: #f8f9fa;">
+                            <input type="checkbox" @bind="row.IsSelected" style="transform: scale(1.2); cursor: pointer;" />
+                        </td>
+                        <td rowspan="2"><TimeSelector @bind-Value="row.SampleTime" /></td>
+                        <td rowspan="2"><TimeSelector @bind-Value="row.TestTime" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.RollWidth" placeholder="Test Roll Width" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.TestRollWidth" placeholder="Test Roll Width" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.Position" placeholder="Position" class="cell-input wide-input" /></td>
+                        <td rowspan="4"><input type="text" @bind="row.RollWeight" placeholder="Roll Weight" class="cell-input wide-input" /></td>
+                        <td rowspan="4"><input type="text" @bind="row.StretchP" placeholder="Ultimate Stretch %" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.AvgStretch" placeholder="Average Stretch %" class="cell-input wide-input" /></td>
+                        <td rowspan="4"><input type="text" @bind="row.Unwind" placeholder="Unwind" class="cell-input wide-input" /></td>
+                        <th>Out</th>
+                        <td><input type="text" @bind="row.Puncture" placeholder="Puncture" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.PW" placeholder="PW" class="cell-input wide-input" /></td>
+                        <td rowspan="4"><input type="text" @bind="row.AvgThickness" placeholder="Avg Thickness" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.LtTransm" placeholder="Haze Lt. Trans." class="cell-input wide-input" /></td>
+                        <td rowspan="4"><textarea @bind="row.GelCount" placeholder="Gel Count" class="cell-input wide-input"></textarea></td>
+                        <td rowspan="4"><textarea @bind="row.Remarks" placeholder="Remarks" class="cell-input wide-input"></textarea></td>
+                        <td rowspan="4"><textarea @bind="row.RollStatus" placeholder="Roll Status" class="cell-input wide-input"></textarea></td>
+                    </tr>
+                    <tr class="data-row-2">
+                        <td><input type="text" @bind="row.AvgOutCling" placeholder="Out Cling" class="cell-input wide-input" /></td>
+                        <td><input type="text" @bind="row.PunStdv" placeholder="Punct. Stdv." class="cell-input wide-input" /></td>
+                    </tr>
+                    <tr class="data-row-3">
+                        <th rowspan="2">Barcode #</th>
+                        <td colspan="3" rowspan="2"><input type="text" @bind="row.Barcode" class="cell-input wide-input" /></td>
+                        <th>Pallet #</th>
+                        <td rowspan="2"><input type="text" @bind="row.StretchForce" placeholder="Stretch Force" class="cell-input wide-input" /></td>
+                        <th>In</th>
+                        <td rowspan="2"><input type="text" @bind="row.NumPunct" placeholder="# of Punct." class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.Tail" placeholder="Tail" class="cell-input wide-input" /></td>
+                        <td rowspan="2"><input type="text" @bind="row.HazeStdv" placeholder="Haze Stdv." class="cell-input wide-input" /></td>
+                    </tr>
+                    <tr class="data-row-4">
+                        <td><input type="text" @bind="row.PalletNum" placeholder="Pallet #" class="cell-input wide-input" /></td>
+                        <td><input type="text" @bind="row.AvgInCling" placeholder="In Cling" class="cell-input wide-input" /></td>
+                    </tr>
+            </tbody>
+            }
+        </table>
+    </div>
+    <!--Buttons-->
+    <div class="row-controls">
+        <button class="btn-add" @onclick="AddEmptyRow">+ Add Row</button>
+        <button class="btn-add" @onclick="OpenCopyDialog" disabled="@(!DataRows.Any())">+ Add Row (Copy Last)</button>
+        <button class="btn-remove" @onclick="RequestRemoveRows" disabled="@(!DataRows.Any(r => r.IsSelected))">− Remove Row</button>
+        <span class="row-count">@DataRows.Count row@(DataRows.Count == 1 ? "" : "s") (@DataRows.Count(r => r.IsSelected) selected)</span>
+        <button class="btn-add" @onclick="SaveToDatabase">Save</button>
+        <span>@saveMessage</span>
+        <div class="export-controls">
+            <button class="btn-export-excel" @onclick="ExportToExcel">↓ Export Excel</button>
+            <button class="btn-export-pdf" @onclick="ExportToPdf">↓ Export PDF</button>
+        </div>
+    </div>
+    <!--Copy Overlay-->
+    @if (showCopyOptions)
+    {
+        <div class="copy-overlay">
+            <div class="copy-dialog">
+                <div class="copy-dialog-header">
+                    <h4>Copy from Last Row</h4>
+                    <button class="copy-dialog-close" @onclick="() => showCopyOptions = false">✕</button>
+                </div>
+                <div class="copy-dialog-body">
+                    <div class="copy-select-bar">
+                        <button class="btn-select-toggle" @onclick="SelectAllColumns">Select All</button>
+                        <button class="btn-select-toggle" @onclick="DeselectAllColumns">Deselect All</button>
+                        <span class="copy-count">@copyableColumns.Count(c => c.Include) of @copyableColumns.Count selected</span>
+                    </div>
+                    <div class="copy-options">
+                        @foreach (var col in copyableColumns)
+                        {
+                            <label>
+                                <input type="checkbox" checked="@col.Include"
+                                       @onchange="e => col.Include = (bool)e.Value" />
+                                @col.Name
+                            </label>
+                        }
+                    </div>
+                </div>
+                <div class="copy-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showCopyOptions = false">Cancel</button>
+                    <button class="btn-add" @onclick="ConfirmCopyRow">Copy Row</button>
+                </div>
+            </div>
+        </div>
+    }
+    <!--Delete Dialog-->
+    @if (showDeleteConfirmation)
+    {
+        <div class="copy-overlay">
+            <div class="delete-dialog">
+                <div class="delete-dialog-header">
+                    <h4>Confirm Deletion</h4>
+                </div>
+                <div class="delete-dialog-body">
+                    <p>Are you sure you want to delete the <strong>@DataRows.Count(r => r.IsSelected)</strong> selected row(s)?</p>
+                    <p class="delete-warning">This action cannot be undone.</p>
+                </div>
+                <div class="delete-dialog-footer">
+                    <button class="btn-secondary" @onclick="() => showDeleteConfirmation = false">Cancel</button>
+                    <button class="btn-danger" @onclick="ConfirmRemoveRows">Yes, Delete</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+<!--Save Confirmation Dialog-->
+@if (showSaveConfirmation)
+{
+    <div class="copy-overlay">
+        <div class="delete-dialog">
+            <div class="delete-dialog-header">
+                <h4>Confirm Save</h4>
+            </div>
+            <div class="delete-dialog-body">
+                <p>Are you sure you want to save this log to the database?</p>
+            </div>
+            <div class="delete-dialog-footer">
+                <button class="btn-secondary" @onclick="() => showSaveConfirmation = false">Cancel</button>
+                <button class="btn-add" @onclick="ConfirmSave">Yes, Save</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    <!--Booleans-->
+    private bool showCopyOptions = false;
+    private bool showDeleteConfirmation = false;
+    private string saveMessage = "";
+
+    <!--Copy Row Code-->
+    private class CopyColumn
+    {
+        public string Name { get; set; }
+        public bool Include { get; set; } = true;
+        public CopyColumn(string name) => Name = name;
+    }
+
+    private List<CopyColumn> copyableColumns = new()
+    {
+        new CopyColumn("Sample Time"),
+        new CopyColumn("Test Time"),
+        new CopyColumn("Test Roll Width"),
+        new CopyColumn("Position"),
+        new CopyColumn("Roll Weight"),
+        new CopyColumn("Ultimate Stretch %"),
+        new CopyColumn("Average Stretch %"),
+        new CopyColumn("Unwind"),
+        new CopyColumn("Puncture"),
+        new CopyColumn("PW"),
+        new CopyColumn("Avg Thickness"),
+        new CopyColumn("Haze Lt. Trans."),
+        new CopyColumn("Gel Count"),
+        new CopyColumn("Remarks"),
+        new CopyColumn("Roll Status"),
+        new CopyColumn("Out Cling"),
+        new CopyColumn("Punct. Stdv."),
+        new CopyColumn("Stretch Force"),
+        new CopyColumn("# of Punct."),
+        new CopyColumn("Tail"),
+        new CopyColumn("Haze Stdv."),
+        new CopyColumn("In Cling"),
+        new CopyColumn("Pallet #"),
+    };
+
+    private void ConfirmCopyRow()
+    {
+        var last = DataRows.Last();
+        var newRow = new SheetRow();
+
+        if (IsIncluded("Sample Time")) newRow.SampleTime = last.SampleTime;
+        if (IsIncluded("Test Time")) newRow.TestTime = last.TestTime;
+        if (IsIncluded("Test Roll Width")) newRow.TestRollWidth = last.TestRollWidth;
+        if (IsIncluded("Position")) newRow.Position = last.Position;
+        if (IsIncluded("Roll Weight")) newRow.RollWeight = last.RollWeight;
+        if (IsIncluded("Ultimate Stretch %")) newRow.StretchP = last.StretchP;
+        if (IsIncluded("Average Stretch %")) newRow.AvgStretch = last.AvgStretch;
+        if (IsIncluded("Unwind")) newRow.Unwind = last.Unwind;
+        if (IsIncluded("Puncture")) newRow.Puncture = last.Puncture;
+        if (IsIncluded("PW")) newRow.PW = last.PW;
+        if (IsIncluded("Avg Thickness")) newRow.AvgThickness = last.AvgThickness;
+        if (IsIncluded("Haze Lt. Trans.")) newRow.LtTransm = last.LtTransm;
+        if (IsIncluded("Gel Count")) newRow.GelCount = last.GelCount;
+        if (IsIncluded("Remarks")) newRow.Remarks = last.Remarks;
+        if (IsIncluded("Roll Status")) newRow.RollStatus = last.RollStatus;
+        if (IsIncluded("Out Cling")) newRow.AvgOutCling = last.AvgOutCling;
+        if (IsIncluded("Punct. Stdv.")) newRow.PunStdv = last.PunStdv;
+        if (IsIncluded("Stretch Force")) newRow.StretchForce = last.StretchForce;
+        if (IsIncluded("# of Punct.")) newRow.NumPunct = last.NumPunct;
+        if (IsIncluded("Tail")) newRow.Tail = last.Tail;
+        if (IsIncluded("Haze Stdv.")) newRow.HazeStdv = last.HazeStdv;
+        if (IsIncluded("In Cling")) newRow.AvgInCling = last.AvgInCling;
+        if (IsIncluded("Pallet #")) newRow.PalletNum = last.PalletNum;
+
+        DataRows.Add(newRow);
+        showCopyOptions = false;
+    }
+
+    private bool IsIncluded(string name) =>
+        copyableColumns.First(c => c.Name == name).Include;
+
+    private void SelectAllColumns() => copyableColumns.ForEach(c => c.Include = true);
+    private void DeselectAllColumns() => copyableColumns.ForEach(c => c.Include = false);
+
+    <!--Copy Dialog-->
+    private void OpenCopyDialog()
+    {
+        if (DataRows.Any())
+            showCopyOptions = true;
+        else
+            AddEmptyRow();
+    }
+
+    <!--Remove Rows-->
+    private void AddEmptyRow()
+    {
+        DataRows.Add(new SheetRow());
+    }
+
+    private void RequestRemoveRows()
+    {
+        if (DataRows.Any(r => r.IsSelected))
+        {
+            showDeleteConfirmation = true;
+        }
+    }
+
+    private void ConfirmRemoveRows()
+    {
+        DataRows.RemoveAll(r => r.IsSelected);
+        showDeleteConfirmation = false;
+
+        if (!DataRows.Any())
+        {
+            AddEmptyRow();
+        }
+    }
+
+    
+    private void GoHome()
+    {
+        Nav.NavigateTo("/");
+    }
+
+    <!--Export Log-->
+    private async Task ExportToExcel()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Stretch Film Test Result Log");
+        sb.AppendLine($"Date,{Esc(Sheet.Date.ToString("yyyy-MM-dd"))},QC Tech,{Esc(Sheet.QCTech)},Shift,{Esc(Sheet.Shift)},Crew,{Esc(Sheet.Crew)}");
+        sb.AppendLine($"Line,{Esc(Sheet.Line)},Film Type,{Esc(Sheet.FilmType)}");
+        sb.AppendLine($"Formula,{Esc(Sheet.Formula)},Roll Width,{Esc(Sheet.RollWidth)},Gauge,{Esc(Sheet.Gauge)}");
+        sb.AppendLine($"USL 1,{Esc(Sheet.USL1)},USL 2,{Esc(Sheet.USL2)},USL 3,{Esc(Sheet.USL3)},USL 4,{Esc(Sheet.USL4)},USL 5,{Esc(Sheet.USL5)},USL 6,{Esc(Sheet.USL6)},USL 7,{Esc(Sheet.USL7)},USL 8,{Esc(Sheet.USL8)}");
+        sb.AppendLine($"LSL 1,{Esc(Sheet.LSL1)},LSL 2,{Esc(Sheet.LSL2)},LSL 3,{Esc(Sheet.LSL3)},LSL 4,{Esc(Sheet.LSL4)},LSL 5,{Esc(Sheet.LSL5)},LSL 6,{Esc(Sheet.LSL6)},LSL 7,{Esc(Sheet.LSL7)},LSL 8,{Esc(Sheet.LSL8)}");
+        sb.AppendLine($"Target 1,{Esc(Sheet.Target1)},Target 2,{Esc(Sheet.Target2)},Target 3,{Esc(Sheet.Target3)},Target 4,{Esc(Sheet.Target4)},Target 5,{Esc(Sheet.Target5)},Target 6,{Esc(Sheet.Target6)},Target 7,{Esc(Sheet.Target7)},Target 8,{Esc(Sheet.Target8)}");
+        sb.AppendLine($"Spec 1,{Esc(Sheet.Spec1)},Spec 2,{Esc(Sheet.Spec2)},Spec 3,{Esc(Sheet.Spec3)},Spec 4,{Esc(Sheet.Spec4)},Spec 5,{Esc(Sheet.Spec5)},Spec 6,{Esc(Sheet.Spec6)}");
+        sb.AppendLine();
+        sb.AppendLine("Sample Time,Test Time,Roll Width,Test Roll Width,Position,Roll Weight,Ultimate Stretch %,Average Stretch %,Unwind,Out Cling,In Cling,Barcode,Pallet #,Puncture,PW,Punct. Stdv.,Stretch Force,# of Punct.,Tail,Avg Thickness,Haze Lt. Trans.,Haze Stdv.,Gel Count,Remarks,Roll Status");
+        foreach (var row in DataRows)
+        {
+            sb.AppendLine(string.Join(",",
+                Esc(row.SampleTime.ToString("HH:mm")),
+                Esc(row.TestTime.ToString("HH:mm")),
+                Esc(row.RollWidth), Esc(row.TestRollWidth), Esc(row.Position), Esc(row.RollWeight),
+                Esc(row.StretchP), Esc(row.AvgStretch), Esc(row.Unwind),
+                Esc(row.AvgOutCling), Esc(row.AvgInCling), Esc(row.Barcode), Esc(row.PalletNum), Esc(row.Puncture),
+                Esc(row.PW), Esc(row.PunStdv), Esc(row.StretchForce),
+                Esc(row.NumPunct), Esc(row.Tail), Esc(row.AvgThickness),
+                Esc(row.LtTransm), Esc(row.HazeStdv), Esc(row.GelCount),
+                Esc(row.Remarks), Esc(row.RollStatus)));
+        }
+        await JS.InvokeVoidAsync("downloadFile", "StretchFilmTestLog.csv", sb.ToString(), "text/csv;charset=utf-8;");
+    }
+
+    private async Task ExportToPdf()
+    {
+        await JS.InvokeVoidAsync("printPage");
+    }
+
+    private static string Esc(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
+        return s;
+    }
+
+    <!--Save Log-->
+    private bool showSaveConfirmation = false;
+
+    private void SaveToDatabase()
+    {
+        showSaveConfirmation = true;
+    }
+
+    private async Task ConfirmSave()
+    {
+        try
+        {
+            await QCTestLogService.SaveSheetAsync(Sheet, DataRows);
+            saveMessage = "Saved successfully!";
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error: {ex.Message}";
+        }
+        showSaveConfirmation = false;
+    }
+
+    protected override void OnInitialized()
+    {
+        DataRows.Add(new SheetRow());
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        filmTypes = await SpecOptionsService.GetFilmTypesAsync();
+    }
+
+    <!--Input Variables-->
+    private SheetHeader Sheet = new();
+    private List<SheetRow> DataRows = new();
+    private List<(int Id, string Name)> filmTypes = new();
+
+    public class SheetHeader
+    {
+        public string FlagComment { get; set; } = "";
+        public int? CreatedByUserId { get; set; }
+        public string? CreatedByName { get; set; }
+        public DateTime Date { get; set; } = DateTime.Now;
+        public string QCTech { get; set; } = "";
+        public string USL1 { get; set; } = "";
+        public string USL2 { get; set; } = "";
+        public string USL3 { get; set; } = "";
+        public string USL4 { get; set; } = "";
+        public string Spec1 { get; set; } = "";
+        public string Spec2 { get; set; } = "";
+        public string Spec3 { get; set; } = "";
+        public string Spec4 { get; set; } = "";
+        public string Spec5 { get; set; } = "";
+        public string Spec6 { get; set; } = "";
+        public string USL5 { get; set; } = "";
+        public string USL6 { get; set; } = "";
+        public string USL7 { get; set; } = "";
+        public string USL8 { get; set; } = "";
+        public string Shift { get; set; } = "";
+        public string Crew { get; set; } = "";
+        public string Target1 { get; set; } = "";
+        public string Target2 { get; set; } = "";
+        public string Target3 { get; set; } = "";
+        public string Target4 { get; set; } = "";
+        public string Target5 { get; set; } = "";
+        public string Target6 { get; set; } = "";
+        public string Target7 { get; set; } = "";
+        public string Target8 { get; set; } = "";
+        public string FilmType { get; set; } = "";
+        public string Line { get; set; } = "";
+        public string LSL1 { get; set; } = "";
+        public string LSL2 { get; set; } = "";
+        public string LSL3 { get; set; } = "";
+        public string LSL4 { get; set; } = "";
+        public string LSL5 { get; set; } = "";
+        public string LSL6 { get; set; } = "";
+        public string LSL7 { get; set; } = "";
+        public string LSL8 { get; set; } = "";
+        public string Formula { get; set; } = "";
+        public string RollWidth { get; set; } = "";
+        public string Gauge { get; set; } = "";
+    }
+
+    public class SheetRow
+    {
+        public bool IsSelected { get; set; } = false;
+        public TimeOnly SampleTime { get; set; } = TimeOnly.FromDateTime(DateTime.Now);
+        public TimeOnly TestTime { get; set; } = TimeOnly.FromDateTime(DateTime.Now);
+        public string RollWidth { get; set; } = "";
+        public string TestRollWidth { get; set; } = "";
+        public string Position { get; set; } = "";
+        public string RollWeight { get; set; } = "";
+        public string StretchP { get; set; } = "";
+        public string AvgStretch { get; set; } = "";
+        public string Unwind { get; set; } = "";
+        public string Puncture { get; set; } = "";
+        public string PW { get; set; } = "";
+        public string AvgThickness { get; set; } = "";
+        public string ThicknessOuter1 { get; set; } = "";
+        public string ThicknessMiddle { get; set; } = "";
+        public string ThicknessOuter2 { get; set; } = "";
+        public string LtTransm { get; set; } = "";
+        public string GelCount { get; set; } = "";
+        public string Remarks { get; set; } = "";
+        public string RollStatus { get; set; } = "";
+        public string TimeEnd { get; set; } = "";
+        public string TestWidth { get; set; } = "";
+        public string AvgOutCling { get; set; } = "";
+        public string OutClingGrade { get; set; } = "";
+        public string PunStdv { get; set; } = "";
+        public string StretchForce { get; set; } = "";
+        public string NumPunct { get; set; } = "";
+        public string Tail { get; set; } = "";
+        public string HazeStdv { get; set; } = "";
+        public string AvgInCling { get; set; } = "";
+        public string InClingGrade { get; set; } = "";
+        public string Barcode { get; set; } = "";
+        public string PalletNum { get; set; } = "";
+        public string SpecSet { get; set; } = "";
+    }
+}
