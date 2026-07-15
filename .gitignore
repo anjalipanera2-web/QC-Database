@@ -18,6 +18,7 @@ appsettings.json
 appsettings.Development.json
 appsettings.Production.json
 web.config
+.claude/
 
 # Environment variables
 .env
