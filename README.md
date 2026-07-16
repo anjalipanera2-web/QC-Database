@@ -2,11 +2,11 @@
 This project was created in a 7-week long internship at Inteplast Group: Amtopp Stretch Films in collaboration with the plant's Quality Control (QC) and Operator (OP) department. This project is a ASP.NET website with a SQL database that serves as a prototype replacement for the 100% paper documentation system currently in place at the plant.
 
 ## Table of Contents
-1. [Repository Structure](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#repository-structure)
-2. [Website Features](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#website-features)
-3. [Technologies Used](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#technologies-used)
-4. [Future Improvements](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#future-improvements)
-5. [Lessons Learned](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#lessons-learned)
+1. [Repository Structure](https://github.com/anjalipanera2-web/QC-Database/main/README.md#repository-structure)
+2. [Website Features](https://github.com/anjalipanera2-web/QC-Database/main/README.md#website-features)
+3. [Technologies Used](https://github.com/anjalipanera2-web/QC-Database/main/README.md#technologies-used)
+4. [Future Improvements](https://github.com/anjalipanera2-web/QC-Database/main/README.md#future-improvements)
+5. [Lessons Learned](https://github.com/anjalipanera2-web/QC-Database/main/README.md#lessons-learned)
 
 ## Repository Structure
 - Database Architecture: Houses the SQL .dacpac file
