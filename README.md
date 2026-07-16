@@ -2,20 +2,17 @@
 This project was created in a 7-week long internship at Inteplast Group: Amtopp Stretch Films in collaboration with the plant's Quality Control (QC) and Operator (OP) department. This project is a ASP.NET website with a SQL database that serves as a prototype replacement for the 100% paper documentation system currently in place at the plant.
 
 ## Table of Contents
-1. Repository Structure
-2. Installation
-3. Website Features
-4. Technologies Used
-5. Future Improvements
-6. Lessons Learned
+1. [Repository Structure](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#repository-structure)
+2. [Website Features](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#website-features)
+3. [Technologies Used](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#technologies-used)
+4. [Future Improvements](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#future-improvements)
+5. [Lessons Learned](https://github.com/anjalipanera2-web/QC-Database/edit/main/README.md#lessons-learned)
 
 ## Repository Structure
 - Database Architecture: Houses the SQL .dacpac file
 - Website: Houses the files for the website
 - .gitignore: Has the local files that Git should ignore when uploading to Github
-- ProductionSheet.slnx: The solution file that runs the website
-
-## Installation
+- ProductionSheet.slnx: The solution file that runs the website=
 
 ## Website Features
 The website has the following features
@@ -49,6 +46,7 @@ This page has four separate tabs:
 - Automatically generated and drawn from test and audit logs from that given date
 
 # OP - Operator Forms
+## Operator Self Inspection Form
 - Flag button to report any outstanding quality issues detected on roll
 - Iterative rows for users to input audit details 
 - Save button allows user to save log to corresponding database
@@ -72,3 +70,17 @@ This page has four separate tabs:
 
 ## Manage Users
 - Admins can add new users or create new admins
+
+# Technologies Used
+Claude Code was supplementally utilized in the development process to understand the structure and syntax of the following languages:
+- HTML
+- C#
+- CSS
+
+# Future Improvements
+- The Stretch Film Test Result Log is very developed, but the other forms need to be updated to have the same features the Test Log has
+- The Daily Quality Issues Log needs to be futher developed
+
+# Lessons Learned
+- This was my first time coding a website in HTML and with a C# backend (with my primary coding language and experience being in Python), so I had some assistance from Claude Code to learn the structure and syntax of HTML and C#, as well as changing any backend dependencies when needed. Overall, however, I feel like I learned a great deal about how to use Blazor to make a ASP.NET website and about the general top-down workflow behind application development
+- This is also my first experience using Github to document and upload my code, so this experience helped familiarize me with how Github works and how to commit changes to a repository. 
