@@ -1,5 +1,5 @@
 # Paperless QC Database
-This project was created in a 7-week long internship at Inteplast Group: Amtopp Stretch Films in collaboration with the plant's Quality Control (QC) and Operator (OP) department. This project is a ASP.NET website with a SQL database that serves as a prototype replacement for the 100% paper documentation system currently in place at the plant.
+This was one of the projects created in a 7-week long internship at Inteplast Group: Amtopp Stretch Films in collaboration with the plant's Quality Control (QC) and Operator (OP) department. This project is a ASP.NET website with a SQL database that serves as a prototype replacement for the 100% paper documentation system currently in place at the plant.
 
 ## Table of Contents
 1. [Repository Structure](https://github.com/anjalipanera2-web/QC-Database/blob/main/README.md#repository-structure)
@@ -20,12 +20,16 @@ The website has the following features
 ## Login Page
 This page allows the user to select who they want to log in as. Currently, there is no password system in place.
 
+![Login Page](Website%20Photos/Login.png)
+
 ## Home Page
 This page has four separate tabs:
 - QC - Quality Control: Houses the Stretch Film Audit Log, Stretch Film Test Result Log, and the Daily Quality Issues Log
 - OP - Operator: Houses the Operator Self Inspection Log
 - Databases: Allows users to view the saved Test Logs, Audit Logs, and Operator Logs
 - Settings: Allows users to add custom film types and specifications, customize their autosave settings, and manage users
+
+![Home Page](Website%20Photos/Home.png)
 
 ## QC - Quality Control Forms
 ### Stretch Film Audit Log
@@ -34,6 +38,8 @@ This page has four separate tabs:
 - Save button allows user to save log to corresponding database
 - Export Excel and PDF buttons allow users to export the log as .xlsx or .pdf file
 
+![QC Audit Page](Website%20Photos/SFRA.png)
+
 ### Stretch Film Test Result Log
 - Flag button to report any outstanding quality issues detected on roll
 - Specification set that automatically generated based on data entered in header of sheet
@@ -41,9 +47,13 @@ This page has four separate tabs:
 - Save button allows user to save log to corresponding database
 - Export Excel and PDF buttons allow users to export the log as .xlsx or .pdf file
 
+![QC Test Page](Website%20Photos/SFTR.png)
+
 ### Daily Quality Issues Log
 - Form that summarizes the shift, crew, film type, and quality issues detected from Stretch Film Test and Audit Logs
 - Automatically generated and drawn from test and audit logs from that given date
+
+![Daily Quality Issues Page](Website%20Photos/DQI.png)
 
 # OP - Operator Forms
 ## Operator Self Inspection Form
@@ -51,6 +61,8 @@ This page has four separate tabs:
 - Iterative rows for users to input audit details 
 - Save button allows user to save log to corresponding database
 - Export Excel and PDF buttons allow users to export the log as .xlsx or .pdf file
+
+![Operator Self Inspection Page](Website%20Photos/OSI.png)
 
 # Databases
 - Allows users to view saved test, audit and operator logs
@@ -60,16 +72,24 @@ This page has four separate tabs:
 - Users can only edit and delete the logs they create
 - Flagged logs have a flag beside them in the list view
 
+![Database Page](Website%20Photos/DatabaseEx.png)
+
 # Settings
 ## Film Type and Formula Settings
 - Custom film types can be added and deleted by admins via a drop-down menu
 - Custom Specification rule sets can be added, viewed, edited, and deleted by admins
 
+![Film Type Settings Page](Website%20Photos/FT%20SS.png)
+
 ## Autosave settings
 - Users can adjust autosave settings to occur every N seconds or after every edit
 
+![Autosave Settings Page](Website%20Photos/Autosave.png)
+
 ## Manage Users
 - Admins can add new users or create new admins
+
+![Manage Users Page](Website%20Photos/Users.png)
 
 # Technologies Used
 Claude Code was supplementally utilized in the development process to understand the structure and syntax of the following languages:
